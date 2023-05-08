@@ -1,0 +1,58 @@
+{
+  "name": "@ruttl/bug-tracking",
+  "version": "1.0.0",
+  "description": "",
+  "main": "lib/commonjs/index.js",
+  "module": "lib/module/index.js",
+  "react-native": "src/index.js",
+  "files": [
+    "lib/",
+    "src/"
+  ],
+  "scripts": {
+    "build": "npm run clean && bob build",
+    "clean": "rimraf lib",
+    "postinstall": "npm run build"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "react-native-builder-bob": {
+    "source": "src",
+    "output": "lib",
+    "targets": [
+      [
+        "commonjs",
+        {
+          "copyFlow": false,
+          "sourceMaps": false
+        }
+      ],
+      [
+        "module",
+        {
+          "sourceMaps": false
+        }
+      ]
+    ]
+  },
+  "devDependencies": {
+    "prettier": "^2.8.8",
+    "react": "^18.2.0",
+    "react-native": "^0.71.7",
+    "react-native-builder-bob": "^0.20.4",
+    "rimraf": "^5.0.0"
+  },
+  "peerDependencies": {
+    "react-native-builder-bob": "^0.20.4"
+  },
+  "dependencies": {
+    "axios": "^1.4.0",
+    "prop-types": "^15.8.1",
+    "react-native-draggable": "^3.3.0",
+    "react-native-material-ripple": "^0.9.1",
+    "react-native-svg": "^13.9.0",
+    "react-native-toast-message": "^2.1.6",
+    "react-native-view-shot": "^3.6.0"
+  }
+}
