@@ -14,6 +14,7 @@ import {
   Text,
   TextInput,
   View,
+  ActivityIndicator,
 } from 'react-native';
 import axios from 'axios';
 import { captureRef, captureScreen } from 'react-native-view-shot';
@@ -107,6 +108,7 @@ const BugTracking = ({ projectID, token }) => {
 
       setVisible(true);
     } catch (e) {
+      console.log(e);
       setWidgetVisible(true);
     }
   };
@@ -133,7 +135,7 @@ const BugTracking = ({ projectID, token }) => {
         appVersion: '1.0.0',
         device: 'iPhone',
         height: Dimensions.get('window').height,
-        osName: 'iOS',
+        osName: Platform.OS,
         width: Dimensions.get('window').width,
       });
 
@@ -326,12 +328,19 @@ const BugTracking = ({ projectID, token }) => {
               value={comment}
             />
             <View style={{ width: 4 }} />
-            <Pressable
-              disabled={loading}
-              onPress={onSubmit}
-              style={styles.button}>
-              <Text style={{ color: 'white' }}>Send</Text>
-            </Pressable>
+            {
+              loading?
+              (<ActivityIndicator color='#6552ff' style={{paddingHorizontal:4}} />):
+              (<Pressable
+                disabled={loading}
+                onPress={onSubmit}
+                style={styles.button}>
+                <Text style={{ color: 'white' }}>Send</Text>
+              </Pressable>)
+              
+            }
+            
+            
           </KeyboardAvoidingView>
         </SafeAreaView>
       </Modal>
