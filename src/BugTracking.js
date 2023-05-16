@@ -144,6 +144,7 @@ const BugTracking = ({ projectID, token }) => {
         data: { id: ticketID },
       } = await apiClient.post('/tickets', {
         comment,
+        description,
         appVersion: '1.0.0',
         device: 'iPhone',
         height: Dimensions.get('window').height,
