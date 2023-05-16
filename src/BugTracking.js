@@ -1,4 +1,5 @@
 import React, { Fragment, useEffect, useRef, useState } from 'react';
+import { BottomSheet } from 'react-native-btr';
 import {
   Animated,
   Dimensions,
@@ -15,6 +16,8 @@ import {
   TextInput,
   View,
   ActivityIndicator,
+  Button,
+  TouchableOpacity,
 } from 'react-native';
 import axios from 'axios';
 import { captureRef, captureScreen } from 'react-native-view-shot';
@@ -50,6 +53,7 @@ const BugTracking = ({ projectID, token }) => {
   const viewRef = useRef();
 
   const [comment, setComment] = useState('');
+  const [description, setDescription] = useState('');
 
   const [currentPath, setCurrentPath] = useState([]);
 
@@ -65,6 +69,13 @@ const BugTracking = ({ projectID, token }) => {
 
   const [visible, setVisible] = useState(false);
 
+  const [btmSheetVisible, setbtmSheetVisible] = useState(false);
+
+  const toggleBottomNavigationView = () => {
+    console.log('hello');
+    setbtmSheetVisible(!btmSheetVisible);
+  };
+
   const [widgetVisible, setWidgetVisible] = useState(true);
 
   const withAnim = useRef(new Animated.Value(40)).current;
@@ -79,6 +90,7 @@ const BugTracking = ({ projectID, token }) => {
 
   const onReset = () => {
     setComment('');
+    setDescription('');
 
     setCurrentPath([]);
 
@@ -206,159 +218,217 @@ const BugTracking = ({ projectID, token }) => {
   }, [expanded, withAnim]);
 
   return (
-    <Fragment>
-      {widgetVisible && (
-        <Draggable
-          isCircle
-          minX={0}
-          minY={0}
-          maxX={Dimensions.get('window').width}
-          maxY={Dimensions.get('window').height}
-          onShortPressRelease={onScreenCapture}
-          renderColor={Colors[0]}
-          renderSize={72}
-          touchableOpacityProps={{ activeOpacity: 0 }}
-          x={Dimensions.get('window').width - (72 + 16)}
-          y={Dimensions.get('window').height - (72 + 16)}
-          z={Constants.zIndex}>
-          <View style={[styles.buttonContainer]}>
-            <Image
-              source={require('./assets/bug.png')}
-              style={{
-                width: 32,
-                height: 32,
-              }}
-            />
-          </View>
-        </Draggable>
-      )}
-      <Modal animationType="slide" transparent visible={visible}>
-        <SafeAreaView style={styles.modalContainer}>
-          <View style={styles.appbarContainer}>
-            <Ripple
-              onPress={onReset}
-              rippleCentered
-              rippleColor="rgb(255, 251, 254)"
-              style={[styles.iconButton, { marginRight: 'auto' }]}>
+    <View style={{zIndex:999}}>
+      <Fragment>
+        {widgetVisible && (
+          <Draggable
+            isCircle
+            minX={0}
+            minY={0}
+            maxX={Dimensions.get('window').width}
+            maxY={Dimensions.get('window').height}
+            onShortPressRelease={onScreenCapture}
+            renderColor={Colors[0]}
+            renderSize={72}
+            touchableOpacityProps={{ activeOpacity: 0 }}
+            x={Dimensions.get('window').width - (72 + 16)}
+            y={Dimensions.get('window').height - (72 + 16)}
+            z={Constants.zIndex}>
+            <View style={[styles.buttonContainer]}>
               <Image
-                source={require('./assets/close.png')}
-                style={{ height: 24, width: 24 }}
+                source={require('./assets/bug.png')}
+                style={{
+                  width: 32,
+                  height: 32,
+                }}
               />
-            </Ripple>
-            <Ripple
-              onPress={onUndo}
-              rippleCentered
-              rippleColor="rgb(255, 251, 254)"
-              style={styles.iconButton}>
-              <Image
-                source={require('./assets/undo.png')}
-                style={{ height: 24, width: 24 }}
-              />
-            </Ripple>
-            <Animated.View
-              style={[styles.colorsContainer, { width: withAnim }]}>
+            </View>
+          </Draggable>
+        )}
+        <Modal animationType="slide" transparent visible={visible}>
+          <SafeAreaView style={styles.modalContainer}>
+            <View style={styles.appbarContainer}>
               <Ripple
-                onPress={toggleOpen}
+                onPress={onReset}
                 rippleCentered
-                rippleOpacity={0.12}
-                style={[
-                  styles.colorButton,
-                  { backgroundColor: selectedColor, borderColor: '#fff' },
-                ]}
-              />
-              {Colors.filter((c) => c !== selectedColor).map((c, i) => (
+                rippleColor="rgb(255, 251, 254)"
+                style={[styles.iconButton, { marginRight: 'auto' }]}>
+                <Image
+                  source={require('./assets/close.png')}
+                  style={{ height: 24, width: 24 }}
+                />
+              </Ripple>
+              <Ripple
+                onPress={onUndo}
+                rippleCentered
+                rippleColor="rgb(255, 251, 254)"
+                style={styles.iconButton}>
+                <Image
+                  source={require('./assets/undo.png')}
+                  style={{ height: 24, width: 24 }}
+                />
+              </Ripple>
+              <Animated.View
+                style={[styles.colorsContainer, { width: withAnim }]}>
                 <Ripple
-                  key={i}
-                  onPress={onChangeSelectedColor(c)}
+                  onPress={toggleOpen}
                   rippleCentered
                   rippleOpacity={0.12}
                   style={[
                     styles.colorButton,
-                    { backgroundColor: c, borderColor: c },
+                    { backgroundColor: selectedColor, borderColor: '#fff' },
                   ]}
                 />
-              ))}
-            </Animated.View>
-          </View>
-          <ScrollView
-            contentContainerStyle={{ alignItems: 'center' }}
-            style={styles.modalContainer}>
-            <View
-              style={styles.svgContainer}
-              onTouchMove={onTouchMove}
-              onTouchEnd={onTouchEnd}>
-              {src && (
-                <ImageBackground
-                  ref={viewRef}
-                  resizeMode="contain"
-                  source={{ uri: src }}>
-                  <Svg height={height} width={width}>
-                    <Path
-                      d={currentPath.join('')}
-                      stroke={selectedColor}
-                      fill={'transparent'}
-                      strokeWidth={4}
-                      strokeLinejoin={'round'}
-                      strokeLinecap={'round'}
-                    />
-                    {paths.length > 0 &&
-                      paths.map(({ color, data }, index) => (
-                        <Path
-                          key={`path-${index}`}
-                          d={data.join('')}
-                          stroke={color}
-                          fill={'transparent'}
-                          strokeWidth={4}
-                          strokeLinejoin={'round'}
-                          strokeLinecap={'round'}
-                        />
-                      ))}
-                  </Svg>
-                </ImageBackground>
-              )}
+                {Colors.filter((c) => c !== selectedColor).map((c, i) => (
+                  <Ripple
+                    key={i}
+                    onPress={onChangeSelectedColor(c)}
+                    rippleCentered
+                    rippleOpacity={0.12}
+                    style={[
+                      styles.colorButton,
+                      { backgroundColor: c, borderColor: c },
+                    ]}
+                  />
+                ))}
+              </Animated.View>
             </View>
-          </ScrollView>
-          <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            style={styles.footerContainer}>
-            <TextInput
-              placeholder="Write a comment"
-              onChangeText={setComment}
-              style={styles.textInput}
-              value={comment}
-            />
-            <View style={{ width: 4 }} />
-            {
-              loading?
-              (<ActivityIndicator color='#6552ff' style={{paddingHorizontal:4}} />):
-              (<Pressable
-                disabled={loading}
-                onPress={onSubmit}
-                style={styles.button}>
-                <Text style={{ color: 'white' }}>Send</Text>
-              </Pressable>)
+            <ScrollView
+              contentContainerStyle={{ alignItems: 'center' }}
+              style={styles.modalContainer}>
+              <View
+                style={styles.svgContainer}
+                onTouchMove={onTouchMove}
+                onTouchEnd={onTouchEnd}>
+                {src && (
+                  <ImageBackground
+                    ref={viewRef}
+                    resizeMode="contain"
+                    source={{ uri: src }}>
+                    <Svg height={height} width={width}>
+                      <Path
+                        d={currentPath.join('')}
+                        stroke={selectedColor}
+                        fill={'transparent'}
+                        strokeWidth={4}
+                        strokeLinejoin={'round'}
+                        strokeLinecap={'round'}
+                      />
+                      {paths.length > 0 &&
+                        paths.map(({ color, data }, index) => (
+                          <Path
+                            key={`path-${index}`}
+                            d={data.join('')}
+                            stroke={color}
+                            fill={'transparent'}
+                            strokeWidth={4}
+                            strokeLinejoin={'round'}
+                            strokeLinecap={'round'}
+                          />
+                        ))}
+                    </Svg>
+                  </ImageBackground>
+                )}
+              </View>
+            </ScrollView>
+            <KeyboardAvoidingView
+              behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+              style={styles.footerContainer}>
+              <TextInput
+                placeholder="Write a comment"
+                onChangeText={setComment}
+                style={styles.textInput}
+                value={comment}
+                focusable={false}
+                onPressOut={toggleBottomNavigationView}
+              />
+              <View style={{ width: 4 }} />
+              {
+                loading?
+                (<ActivityIndicator color='#6552ff' style={{paddingHorizontal:4}} />):
+                (<Pressable
+                  disabled={comment===''}
+                  onPress={onSubmit}
+                  style={styles.button}>
+                  <Text style={{ color: 'white' }}>Send</Text>
+                </Pressable>)
+                
+              }
+              <BottomSheet
+                visible={btmSheetVisible}
+                onBackButtonPress={toggleBottomNavigationView}
+                onBackdropPress={toggleBottomNavigationView} >
+                <View style={{padding:16 , backgroundColor:'#fff' , borderTopLeftRadius:24 , borderTopRightRadius:24 , alignItems:'center' }}>
+                  <TextInput
+                    style={{
+                      width:'100%',
+                      borderRadius:5,
+                      borderColor:'#E7E7E7',
+                      borderWidth:1,
+                      fontSize:16,
+                      padding:8
+                    }}
+                    keyboardType='name-phone-pad'
+                    placeholder="Add issue title"
+                    value={comment}
+                    onChangeText={setComment}
+                    />
+                  <TextInput
+                    style={{
+                      width:'100%',
+                      marginTop:24 ,
+                      marginBottom:15,
+                      borderRadius:5,
+                      borderColor:'#E7E7E7',
+                      borderWidth:1,
+                      fontSize:16,
+                      padding:8,
+                      textAlignVertical:'top'
+                    }}
+                    keyboardType='name-phone-pad'
+                    placeholder="Add issue description"
+                    multiline
+                    numberOfLines={5}
+                    value={description}
+                    onChangeText={setDescription}
+                    />
+                  {
+                    loading?
+                    (<ActivityIndicator color='#6552ff' style={{paddingHorizontal:4}} />):
+                    (<TouchableOpacity
+                      onPress={onSubmit}
+                      style={{
+                        width:'100%',
+                        backgroundColor:comment!==""?'#6552FF':'#6552FF80',
+                        borderRadius:4,
+                        alignItems:'center',
+                        padding:15
+                      }}>
+                      <Text style={{color:'#fff'}}>Submit</Text>
+                    </TouchableOpacity>)
+                  }
+                </View>
+              </BottomSheet>
               
-            }
-            
-            
-          </KeyboardAvoidingView>
-        </SafeAreaView>
-      </Modal>
-      <Toast
-        config={{
-          info: (props) => (
-            <BaseToast
-              {...props}
-              style={{ backgroundColor: '#6552ff', borderLeftWidth: 0 }}
-              text1Style={{
-                color: 'white',
-                fontWeight: '400',
-              }}
-            />
-          ),
-        }}
-      />
-    </Fragment>
+            </KeyboardAvoidingView>
+          </SafeAreaView>
+        </Modal>
+        <Toast
+          config={{
+            info: (props) => (
+              <BaseToast
+                {...props}
+                style={{ backgroundColor: '#6552ff', borderLeftWidth: 0 }}
+                text1Style={{
+                  color: 'white',
+                  fontWeight: '400',
+                }}
+              />
+            ),
+          }}
+        />
+      </Fragment>
+    </View>
   );
 };
 
