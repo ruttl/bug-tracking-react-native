@@ -34,10 +34,7 @@ const Constants = {
 
 const height = Dimensions.get('window').height * 0.72; // reduce height by 30%
 
-const aspectRatio =
-  Dimensions.get('window').width / Dimensions.get('window').height;
-
-const width = height * aspectRatio;
+const width = height * Constants.aspectRatio;
 
 const Colors = ['#160647', '#FF4F6D', '#FCFF52'];
 
@@ -75,6 +72,8 @@ const BugTracking = ({ projectID, token }) => {
     setbtmSheetVisible(!btmSheetVisible);
   };
 
+  const [isTouch , setTouch] = useState(false);
+
   const [widgetVisible, setWidgetVisible] = useState(true);
 
   const withAnim = useRef(new Animated.Value(40)).current;
@@ -86,6 +85,8 @@ const BugTracking = ({ projectID, token }) => {
       setSelectedColor(color);
     }, 500);
   };
+
+  const [lastTouch , setLastTouch] = useState([-1,-1]);
 
   const onReset = () => {
     setComment('');
@@ -179,18 +180,37 @@ const BugTracking = ({ projectID, token }) => {
     }
   };
 
+  const onTouchStart = (event) => {
+    setLastTouch([event.nativeEvent.locationX,event.nativeEvent.locationY])
+    setTouch(true);
+  }
+
   const onTouchMove = (event) => {
-    const newPath = [...currentPath];
+    if(isTouch){
+      const newPath = [...currentPath];
 
-    const { locationX, locationY } = event.nativeEvent;
+      const { locationX, locationY } = event.nativeEvent;
+      
+      const newPoint = `${newPath.length === 0 ? 'M' : ''}${locationX.toFixed(
+        0,
+      )},${locationY.toFixed(0)} `;
 
-    const newPoint = `${newPath.length === 0 ? 'M' : ''}${locationX.toFixed(
-      0,
-    )},${locationY.toFixed(0)} `;
+      if(
+            !(lastTouch[0]<15 && locationX-lastTouch[0]>25) &&
+            !(lastTouch[1]<15 && locationY-lastTouch[1]>25) &&
+            !(lastTouch[0]>width-15 && lastTouch[0]-locationX>25) &&
+            !(lastTouch[1]>height-15 && lastTouch[0]-locationX>25)
+        )
+      {
+        newPath.push(newPoint);
+        setLastTouch([locationX,locationY]);
+        setCurrentPath(newPath);
+      }
+      else{
+        setTouch(false)
+      }
+    }
 
-    newPath.push(newPoint);
-
-    setCurrentPath(newPath);
   };
 
   const onTouchEnd = () => {
@@ -302,6 +322,7 @@ const BugTracking = ({ projectID, token }) => {
               style={styles.modalContainer}>
               <View
                 style={styles.svgContainer}
+                onTouchStart={onTouchStart}
                 onTouchMove={onTouchMove}
                 onTouchEnd={onTouchEnd}>
                 {src && (
