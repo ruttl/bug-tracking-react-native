@@ -72,7 +72,6 @@ const BugTracking = ({ projectID, token }) => {
   const [btmSheetVisible, setbtmSheetVisible] = useState(false);
 
   const toggleBottomNavigationView = () => {
-    console.log('hello');
     setbtmSheetVisible(!btmSheetVisible);
   };
 
@@ -154,20 +153,24 @@ const BugTracking = ({ projectID, token }) => {
 
       await apiClient.post(`/tickets/${ticketID}/screenshot`, {
         image: uri,
-      });
+      }).then(
+        ()=> 
+        Toast.show({
+          position: 'top',
+          type: 'info',
+          text1: 'New ticket added successfully.',
+        })
+      ).catch(e=>console.log("Error is"+e));
 
       onReset();
-
-      Toast.show({
-        position: 'bottom',
-        type: 'info',
-        text1: 'New ticket added successfully.',
-      });
+      
     } catch (e) {
       onReset();
 
+      console.log(e);
+
       Toast.show({
-        position: 'bottom',
+        position: 'top',
         type: 'info',
         text1: 'Something went wrong, try again.',
       });
@@ -337,6 +340,7 @@ const BugTracking = ({ projectID, token }) => {
               style={styles.footerContainer}>
               <TextInput
                 placeholder="Write a comment"
+                placeholderTextColor="#16064780"
                 onChangeText={setComment}
                 style={styles.textInput}
                 value={comment}
@@ -365,12 +369,14 @@ const BugTracking = ({ projectID, token }) => {
                       width:'100%',
                       borderRadius:5,
                       borderColor:'#E7E7E7',
+                      color:"#160647",
                       borderWidth:1,
                       fontSize:16,
                       padding:8
                     }}
                     keyboardType='name-phone-pad'
                     placeholder="Add issue title"
+                    placeholderTextColor="#16064780"
                     value={comment}
                     onChangeText={setComment}
                     />
@@ -384,10 +390,12 @@ const BugTracking = ({ projectID, token }) => {
                       borderWidth:1,
                       fontSize:16,
                       padding:8,
-                      textAlignVertical:'top'
+                      textAlignVertical:'top',
+                      color:"#160647"
                     }}
                     keyboardType='name-phone-pad'
                     placeholder="Add issue description"
+                    placeholderTextColor="#16064780"
                     multiline
                     numberOfLines={5}
                     value={description}
@@ -513,6 +521,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#6552ff',
     borderRadius: 12,
+    color:"#160647"
   },
   button: {
     alignItems: 'center',
