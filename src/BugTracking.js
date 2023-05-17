@@ -195,7 +195,7 @@ const BugTracking = ({ projectID, token }) => {
         0,
       )},${locationY.toFixed(0)} `;
 
-      if(
+      if(locationX>2 && locationY>2 && locationX<width-2 && locationY<height-2 &&
             !(lastTouch[0]<15 && locationX-lastTouch[0]>25) &&
             !(lastTouch[1]<15 && locationY-lastTouch[1]>25) &&
             !(lastTouch[0]>width-15 && lastTouch[0]-locationX>25) &&
