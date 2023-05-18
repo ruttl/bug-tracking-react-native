@@ -388,12 +388,8 @@ const BugTracking = ({ projectID, token }) => {
                   <TextInput
                     style={{
                       width:'100%',
-                      borderRadius:5,
-                      borderColor:'#E7E7E7',
                       color:"#160647",
-                      borderWidth:1,
-                      fontSize:16,
-                      padding:8
+                      fontSize:17,
                     }}
                     keyboardType='name-phone-pad'
                     placeholder="Add issue title"
@@ -409,7 +405,7 @@ const BugTracking = ({ projectID, token }) => {
                       borderRadius:5,
                       borderColor:'#E7E7E7',
                       borderWidth:1,
-                      fontSize:16,
+                      fontSize:15,
                       padding:8,
                       textAlignVertical:'top',
                       color:"#160647"
