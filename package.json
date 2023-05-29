@@ -1,6 +1,6 @@
 {
   "name": "@ruttl/bug-tracking",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "",
   "main": "lib/commonjs/index.js",
   "module": "lib/module/index.js",
@@ -14,7 +14,10 @@
     "clean": "rimraf lib",
     "postinstall": "npm run build"
   },
-  "keywords": [],
+  "keywords": ["ruttl", "bug trakcing"],
+  "repository": "https://github.com/ruttl/bug-tracking-react-native.git",
+  "bugs": "https://github.com/ruttl/bug-tracking-react-native/issues",
+  "homepage": "https://ruttl.com/mobile-app-feedback/",
   "author": "",
   "license": "ISC",
   "react-native-builder-bob": {

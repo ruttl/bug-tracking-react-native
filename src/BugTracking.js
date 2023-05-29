@@ -72,7 +72,7 @@ const BugTracking = ({ projectID, token }) => {
     setbtmSheetVisible(!btmSheetVisible);
   };
 
-  const [isTouch , setTouch] = useState(false);
+  const [isTouch, setTouch] = useState(false);
 
   const [widgetVisible, setWidgetVisible] = useState(true);
 
@@ -86,7 +86,7 @@ const BugTracking = ({ projectID, token }) => {
     }, 500);
   };
 
-  const [lastTouch , setLastTouch] = useState([-1,-1]);
+  const [lastTouch, setLastTouch] = useState([-1, -1]);
 
   const onReset = () => {
     setComment('');
@@ -120,7 +120,6 @@ const BugTracking = ({ projectID, token }) => {
 
       setVisible(true);
     } catch (e) {
-      console.log(e);
       setWidgetVisible(true);
     }
   };
@@ -134,7 +133,7 @@ const BugTracking = ({ projectID, token }) => {
       });
 
       const apiClient = axios.create({
-        baseURL: `https://us-central1-rally-brucira.cloudfunctions.net/mobile/projects/${projectID}`,
+        baseURL: `https://us-central1-ruttlp.cloudfunctions.net/mobile/projects/${projectID}`,
         headers: {
           'x-plugin-code': token,
         },
@@ -145,30 +144,29 @@ const BugTracking = ({ projectID, token }) => {
       } = await apiClient.post('/tickets', {
         comment,
         description,
-        appVersion: '1.0.0',
-        device: 'iPhone',
+        // appVersion: '1.0.0',
+        // device: 'iPhone',
         height: Dimensions.get('window').height,
         osName: Platform.OS,
         width: Dimensions.get('window').width,
       });
 
-      await apiClient.post(`/tickets/${ticketID}/screenshot`, {
-        image: uri,
-      }).then(
-        ()=> 
-        Toast.show({
-          position: 'top',
-          type: 'info',
-          text1: 'New ticket added successfully.',
+      await apiClient
+        .post(`/tickets/${ticketID}/screenshot`, {
+          image: uri,
         })
-      ).catch(e=>console.log("Error is"+e));
+        .then(() =>
+          Toast.show({
+            position: 'top',
+            type: 'info',
+            text1: 'New ticket added successfully.',
+          }),
+        )
+        .catch((e) => console.log('Error is' + e));
 
       onReset();
-      
     } catch (e) {
       onReset();
-
-      console.log(e);
 
       Toast.show({
         position: 'top',
@@ -181,36 +179,37 @@ const BugTracking = ({ projectID, token }) => {
   };
 
   const onTouchStart = (event) => {
-    setLastTouch([event.nativeEvent.locationX,event.nativeEvent.locationY])
+    setLastTouch([event.nativeEvent.locationX, event.nativeEvent.locationY]);
     setTouch(true);
-  }
+  };
 
   const onTouchMove = (event) => {
-    if(isTouch){
+    if (isTouch) {
       const newPath = [...currentPath];
 
       const { locationX, locationY } = event.nativeEvent;
-      
+
       const newPoint = `${newPath.length === 0 ? 'M' : ''}${locationX.toFixed(
         0,
       )},${locationY.toFixed(0)} `;
 
-      if(locationX>2 && locationY>2 && locationX<width-2 && locationY<height-2 &&
-            !(lastTouch[0]<15 && locationX-lastTouch[0]>25) &&
-            !(lastTouch[1]<15 && locationY-lastTouch[1]>25) &&
-            !(lastTouch[0]>width-15 && lastTouch[0]-locationX>25) &&
-            !(lastTouch[1]>height-15 && lastTouch[0]-locationX>25)
-        )
-      {
+      if (
+        locationX > 2 &&
+        locationY > 2 &&
+        locationX < width - 2 &&
+        locationY < height - 2 &&
+        !(lastTouch[0] < 15 && locationX - lastTouch[0] > 25) &&
+        !(lastTouch[1] < 15 && locationY - lastTouch[1] > 25) &&
+        !(lastTouch[0] > width - 15 && lastTouch[0] - locationX > 25) &&
+        !(lastTouch[1] > height - 15 && lastTouch[0] - locationX > 25)
+      ) {
         newPath.push(newPoint);
-        setLastTouch([locationX,locationY]);
+        setLastTouch([locationX, locationY]);
         setCurrentPath(newPath);
-      }
-      else{
-        setTouch(false)
+      } else {
+        setTouch(false);
       }
     }
-
   };
 
   const onTouchEnd = () => {
@@ -242,7 +241,7 @@ const BugTracking = ({ projectID, token }) => {
   }, [expanded, withAnim]);
 
   return (
-    <View style={{zIndex:999}}>
+    <View style={{ zIndex: 999 }}>
       <Fragment>
         {widgetVisible && (
           <Draggable
@@ -369,73 +368,85 @@ const BugTracking = ({ projectID, token }) => {
                 onPressOut={toggleBottomNavigationView}
               />
               <View style={{ width: 4 }} />
-              {
-                loading?
-                (<ActivityIndicator color='#6552ff' style={{paddingHorizontal:4}} />):
-                (<Pressable
-                  disabled={comment===''}
+              {loading ? (
+                <ActivityIndicator
+                  color="#6552ff"
+                  style={{ paddingHorizontal: 4 }}
+                />
+              ) : (
+                <Pressable
+                  disabled={comment === ''}
                   onPress={onSubmit}
                   style={styles.button}>
                   <Text style={{ color: 'white' }}>Send</Text>
-                </Pressable>)
-                
-              }
+                </Pressable>
+              )}
               <BottomSheet
                 visible={btmSheetVisible}
                 onBackButtonPress={toggleBottomNavigationView}
-                onBackdropPress={toggleBottomNavigationView} >
-                <View style={{padding:16 , backgroundColor:'#fff' , borderTopLeftRadius:24 , borderTopRightRadius:24 , alignItems:'center' }}>
+                onBackdropPress={toggleBottomNavigationView}>
+                <View
+                  style={{
+                    padding: 16,
+                    backgroundColor: '#fff',
+                    borderTopLeftRadius: 24,
+                    borderTopRightRadius: 24,
+                    alignItems: 'center',
+                  }}>
                   <TextInput
                     style={{
-                      width:'100%',
-                      color:"#160647",
-                      fontSize:17,
+                      width: '100%',
+                      color: '#160647',
+                      fontSize: 17,
                     }}
-                    keyboardType='name-phone-pad'
+                    keyboardType="name-phone-pad"
                     placeholder="Add issue title"
                     placeholderTextColor="#16064780"
                     value={comment}
                     onChangeText={setComment}
-                    />
+                  />
                   <TextInput
                     style={{
-                      width:'100%',
-                      marginTop:24 ,
-                      marginBottom:15,
-                      borderRadius:5,
-                      borderColor:'#E7E7E7',
-                      borderWidth:1,
-                      fontSize:15,
-                      padding:8,
-                      textAlignVertical:'top',
-                      color:"#160647"
+                      width: '100%',
+                      marginTop: 24,
+                      marginBottom: 15,
+                      borderRadius: 5,
+                      borderColor: '#E7E7E7',
+                      borderWidth: 1,
+                      fontSize: 15,
+                      padding: 8,
+                      textAlignVertical: 'top',
+                      color: '#160647',
                     }}
-                    keyboardType='name-phone-pad'
+                    keyboardType="name-phone-pad"
                     placeholder="Add issue description"
                     placeholderTextColor="#16064780"
                     multiline
                     numberOfLines={5}
                     value={description}
                     onChangeText={setDescription}
+                  />
+                  {loading ? (
+                    <ActivityIndicator
+                      color="#6552ff"
+                      style={{ paddingHorizontal: 4 }}
                     />
-                  {
-                    loading?
-                    (<ActivityIndicator color='#6552ff' style={{paddingHorizontal:4}} />):
-                    (<TouchableOpacity
+                  ) : (
+                    <TouchableOpacity
                       onPress={onSubmit}
                       style={{
-                        width:'100%',
-                        backgroundColor:comment!==""?'#6552FF':'#6552FF80',
-                        borderRadius:4,
-                        alignItems:'center',
-                        padding:15
+                        width: '100%',
+                        backgroundColor:
+                          comment !== '' ? '#6552FF' : '#6552FF80',
+                        borderRadius: 4,
+                        alignItems: 'center',
+                        padding: 15,
                       }}>
-                      <Text style={{color:'#fff'}}>Submit</Text>
-                    </TouchableOpacity>)
-                  }
+                      <Text style={{ color: '#fff' }}>Submit</Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
               </BottomSheet>
-              
             </KeyboardAvoidingView>
           </SafeAreaView>
         </Modal>
@@ -538,7 +549,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#6552ff',
     borderRadius: 12,
-    color:"#160647"
+    color: '#160647',
   },
   button: {
     alignItems: 'center',
