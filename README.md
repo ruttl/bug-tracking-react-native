@@ -1,9 +1,9 @@
 ## Introduction
 
-Welcome to the official Bug Tracking React Native library provided by [ruttl](https://ruttl.com/mobile-app-feedback/). The Bug Tracking React Native library is an open-source project, and we'd love to see your contributions!
+Welcome to the official Bug Tracking React Native component provided by [ruttl](https://ruttl.com/mobile-app-feedback/). The Bug Tracking React Native component is an open-source project, and we'd love to see your contributions!
 
 ## Quick Start Guide
-Ruttl's Bug Tracking React Native library is a re-usable component built around ruttl’s bug tracking ecosystem. Check out our [official website](https://ruttl.com/mobile-app-feedback/) for more in depth information.
+Ruttl's Bug Tracking React Native component is a re-usable component built around ruttl’s bug tracking ecosystem. Check out our [official website](https://ruttl.com/mobile-app-feedback/) for more in depth information.
 
 ### Step 1: Installation
 Under your app's root directory, run
@@ -16,7 +16,7 @@ Following code snippet shows how you can use our SDK with an existing component 
 
 ```jsx
 import React from 'react';
-import { SafeAreaView, View } from "react-native";
+import { SafeAreaView, View } from 'react-native';
 import BugTracking from '@ruttl/bug-tracking';
 
 const ExistingComponent = () => {
