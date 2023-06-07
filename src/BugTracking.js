@@ -78,6 +78,8 @@ const BugTracking = ({ projectID, token }) => {
 
   const withAnim = useRef(new Animated.Value(40)).current;
 
+  const issueTitleRef = useRef();
+
   const onChangeSelectedColor = (color) => () => {
     setExpanded(false);
 
@@ -166,6 +168,7 @@ const BugTracking = ({ projectID, token }) => {
 
       onReset();
     } catch (e) {
+      console.log('Error in request '+e)
       onReset();
 
       Toast.show({
@@ -239,6 +242,14 @@ const BugTracking = ({ projectID, token }) => {
       useNativeDriver: false,
     }).start();
   }, [expanded, withAnim]);
+
+  useEffect(()=>{
+    if(btmSheetVisible){
+      setTimeout(() => {
+        issueTitleRef.current.focus()
+      }, 200)
+    }
+  },[btmSheetVisible]);
 
   return (
     <View style={{ zIndex: 999 }}>
@@ -389,11 +400,12 @@ const BugTracking = ({ projectID, token }) => {
                   style={{
                     padding: 16,
                     backgroundColor: '#fff',
-                    borderTopLeftRadius: 24,
-                    borderTopRightRadius: 24,
+                    borderTopLeftRadius: 16,
+                    borderTopRightRadius: 16,
                     alignItems: 'center',
                   }}>
                   <TextInput
+                    ref={issueTitleRef}
                     style={{
                       width: '100%',
                       color: '#160647',
