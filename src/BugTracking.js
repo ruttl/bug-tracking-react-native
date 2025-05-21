@@ -1,5 +1,5 @@
-import React, {Fragment, useEffect, useRef, useState} from 'react';
-import {BottomSheet} from 'react-native-btr';
+import React, { Fragment, useEffect, useRef, useState } from 'react';
+import { BottomSheet } from 'react-native-btr';
 import {
   Animated as RNAnimated,
   Dimensions,
@@ -18,17 +18,18 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import axios from 'axios';
-import {captureRef, captureScreen} from 'react-native-view-shot';
+import { captureRef, captureScreen } from 'react-native-view-shot';
 import Draggable from 'react-native-draggable';
 import Ripple from 'react-native-material-ripple';
-import {Path, Svg} from 'react-native-svg';
+import { Path, Svg } from 'react-native-svg';
 import PropTypes from 'prop-types';
-import Toast, {BaseToast} from 'react-native-toast-message';
-import {PanGestureHandler} from 'react-native-gesture-handler';
+import Toast, { BaseToast } from 'react-native-toast-message';
+import { PanGestureHandler } from 'react-native-gesture-handler';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   useAnimatedGestureHandler,
+  withTiming,
 } from 'react-native-reanimated';
 
 const Constants = {
@@ -44,12 +45,7 @@ const BUTTON_SIZE = 72;
 const MARGIN = 0;
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const SCREEN_HEIGHT = Dimensions.get('window').height;
-
-if (!global._REANIMATED_VERSION) {
-  console.warn(
-    '⚠️ You need to import `react-native-reanimated` at the top of your entry file.',
-  );
-}
+const PADDING = 16;
 
 export const CommentInput = ({
   comment,
@@ -58,50 +54,73 @@ export const CommentInput = ({
   loading,
   onSubmit,
 }) => {
+  const [error, setError] = React.useState(false);
+  const resetTimer = React.useRef(null);
+
+  const handleSubmit = () => {
+    if (!comment.trim()) {
+      setError(true);
+      if (resetTimer.current) clearTimeout(resetTimer.current);
+      resetTimer.current = setTimeout(() => setError(false), 3000);
+      return;
+    }
+    onSubmit?.();
+  };
+
+  const handleChange = (text) => {
+    setComment(text);
+    if (error && text.trim()) setError(false);
+  };
+
   return (
-    <>
-      <View style={styles.inputWrapper}>
-        <TextInput
-          placeholder="Report the issue"
-          placeholderTextColor="#16064780"
-          onChangeText={setComment}
-          style={styles.singleTextInput}
-          value={comment}
-          focusable={false}
-          // onPressOut={toggleBottomNavigationView}
-        />
-        <TouchableOpacity onPress={toggleBottomNavigationView}>
-          <Image
-            source={require('./assets/chat-icon.png')}
-            style={styles.iconImage}
-            resizeMode="cover"
+    <View style={styles.commentContainer}>
+      <View style={styles.row}>
+        <View style={[styles.inputWrapper, error && { borderColor: 'red' }]}>
+          <TextInput
+            placeholder={'Report the issue'}
+            placeholderTextColor={'#16064780'}
+            onChangeText={handleChange}
+            value={comment}
+            style={styles.singleTextInput}
           />
-        </TouchableOpacity>
+          <TouchableOpacity onPress={toggleBottomNavigationView}>
+            <Image
+              source={require('./assets/chat-icon.png')}
+              style={styles.iconImage}
+              resizeMode="cover"
+            />
+          </TouchableOpacity>
+        </View>
+
+        <View style={{ width: 4 }} />
+
+        {loading ? (
+          <ActivityIndicator color="#6552ff" style={{ paddingHorizontal: 4 }} />
+        ) : (
+          <TouchableOpacity
+            onPress={handleSubmit}
+            style={styles.rightIconContainer}>
+            <Image
+              source={require('./assets/arrow-right.png')}
+              style={styles.rightIcon}
+              resizeMode="cover"
+            />
+          </TouchableOpacity>
+        )}
       </View>
-      <View style={{width: 4}} />
-      {loading ? (
-        <ActivityIndicator color="#6552ff" style={{paddingHorizontal: 4}} />
-      ) : (
-        <TouchableOpacity
-          disabled={comment === ''}
-          onPress={onSubmit}
-          style={styles.rightIconContainer}>
-          <Image
-            source={require('./assets/arrow-right.png')}
-            style={styles.rightIcon}
-            resizeMode="cover"
-          />
-        </TouchableOpacity>
+      {error && (
+        <Text style={styles.errorText}>
+          Please enter a comment before submitting
+        </Text>
       )}
-    </>
+    </View>
   );
 };
 
-const DraggableFab = ({onPress}) => {
-  const startX = Dimensions.get('window').width - 88;
-  const startY = Dimensions.get('window').height - 88;
+const DraggableFab = ({ onPress }) => {
+  const startX = SCREEN_WIDTH - BUTTON_SIZE - PADDING;
+  const startY = SCREEN_HEIGHT - BUTTON_SIZE - PADDING;
 
-  // shared values track position
   const x = useSharedValue(startX);
   const y = useSharedValue(startY);
 
@@ -115,18 +134,28 @@ const DraggableFab = ({onPress}) => {
       const newY = ctx.offsetY + event.translationY;
 
       x.value = Math.max(
-        MARGIN,
-        Math.min(newX, SCREEN_WIDTH - BUTTON_SIZE - MARGIN),
+        PADDING,
+        Math.min(newX, SCREEN_WIDTH - BUTTON_SIZE - PADDING),
       );
       y.value = Math.max(
-        MARGIN,
-        Math.min(newY, SCREEN_HEIGHT - BUTTON_SIZE - MARGIN),
+        PADDING,
+        Math.min(newY, SCREEN_HEIGHT - BUTTON_SIZE - PADDING),
       );
+    },
+    onEnd: () => {
+      const toLeft = x.value < SCREEN_WIDTH / 2;
+      const toTop = y.value < SCREEN_HEIGHT / 2;
+
+      const finalX = toLeft ? PADDING : SCREEN_WIDTH - BUTTON_SIZE - PADDING;
+      const finalY = toTop ? PADDING : SCREEN_HEIGHT - BUTTON_SIZE - PADDING;
+
+      x.value = withTiming(finalX, { duration: 400 });
+      y.value = withTiming(finalY, { duration: 400 });
     },
   });
 
   const fabStyle = useAnimatedStyle(() => ({
-    transform: [{translateX: x.value}, {translateY: y.value}],
+    transform: [{ translateX: x.value }, { translateY: y.value }],
   }));
 
   return (
@@ -146,7 +175,7 @@ const DraggableFab = ({onPress}) => {
           style={styles.buttonContainer}>
           <Image
             source={require('./assets/ruttl.png')}
-            style={{width: 24, height: 24}}
+            style={{ width: 24, height: 24 }}
           />
         </TouchableOpacity>
       </Animated.View>
@@ -154,7 +183,7 @@ const DraggableFab = ({onPress}) => {
   );
 };
 
-export const BugTracking = ({projectID = '', token = ''}) => {
+export const BugTracking = ({ projectID = '', token = '' }) => {
   if (!projectID || !token) {
     throw new Error(
       `Error: Unable to find required prop 'projectID' or 'token' or both.`,
@@ -172,6 +201,8 @@ export const BugTracking = ({projectID = '', token = ''}) => {
   const [src, setSrc] = useState('');
   const [visible, setVisible] = useState(false);
   const [btmSheetVisible, setbtmSheetVisible] = useState(false);
+  const [error, setError] = useState(false);
+  const timerRef = useRef(null);
 
   const toggleBottomNavigationView = () => {
     setbtmSheetVisible(!btmSheetVisible);
@@ -183,7 +214,7 @@ export const BugTracking = ({projectID = '', token = ''}) => {
   const [lastTouch, setLastTouch] = useState([-1, -1]);
   const issueTitleRef = useRef(null);
 
-  const onChangeSelectedColor = color => () => {
+  const onChangeSelectedColor = (color) => () => {
     setExpanded(false);
 
     setTimeout(() => {
@@ -204,7 +235,7 @@ export const BugTracking = ({projectID = '', token = ''}) => {
   const onScreenCapture = async () => {
     try {
       setWidgetVisible(false);
-      await new Promise(resolve => {
+      await new Promise((resolve) => {
         setTimeout(resolve, 100);
       });
 
@@ -222,6 +253,14 @@ export const BugTracking = ({projectID = '', token = ''}) => {
 
   const onSubmit = async () => {
     try {
+      if (!comment.trim()) {
+        setError(true);
+        if (timerRef.current) clearTimeout(timerRef.current);
+        timerRef.current = setTimeout(() => setError(false), 3000);
+
+        return;
+      }
+
       setLoading(true);
       if (!viewRef.current) {
         Toast.show({
@@ -239,7 +278,7 @@ export const BugTracking = ({projectID = '', token = ''}) => {
       const apiClient = axios.create({
         // baseURL: `https://us-central1-ruttlp.cloudfunctions.net/mobile/projects/${projectID}`,
         baseURL: `https://us-central1-rally-brucira.cloudfunctions.net/mobile/projects/${projectID}`,
-        headers: {'x-plugin-code': token},
+        headers: { 'x-plugin-code': token },
       });
 
       const saveData = {
@@ -253,7 +292,7 @@ export const BugTracking = ({projectID = '', token = ''}) => {
       };
 
       const {
-        data: {id: ticketID},
+        data: { id: ticketID },
       } = await apiClient.post('/tickets', saveData);
 
       await apiClient
@@ -267,7 +306,7 @@ export const BugTracking = ({projectID = '', token = ''}) => {
             text1: 'New ticket added successfully.',
           }),
         )
-        .catch(e => console.log('Error is' + e));
+        .catch((e) => console.log('Error is' + e));
 
       onReset();
     } catch (e) {
@@ -285,15 +324,15 @@ export const BugTracking = ({projectID = '', token = ''}) => {
     }
   };
 
-  const onTouchStart = event => {
+  const onTouchStart = (event) => {
     setLastTouch([event.nativeEvent.locationX, event.nativeEvent.locationY]);
     setTouch(true);
   };
 
-  const onTouchMove = event => {
+  const onTouchMove = (event) => {
     if (isTouch) {
       const newPath = [...currentPath];
-      const {locationX, locationY} = event.nativeEvent;
+      const { locationX, locationY } = event.nativeEvent;
       const newPoint = `${newPath.length === 0 ? 'M' : ''}${locationX.toFixed(
         0,
       )},${locationY.toFixed(0)} `;
@@ -320,17 +359,22 @@ export const BugTracking = ({projectID = '', token = ''}) => {
   const onTouchEnd = () => {
     const currentPaths = [...paths];
     const newPath = [...currentPath];
-    currentPaths.push({color: selectedColor, data: newPath});
+    currentPaths.push({ color: selectedColor, data: newPath });
     setPaths(currentPaths);
     setCurrentPath([]);
   };
 
   const onUndo = () => {
-    setPaths(state => state.slice(0, -1));
+    setPaths((state) => state.slice(0, -1));
   };
 
   const toggleOpen = () => {
-    setExpanded(state => !state);
+    setExpanded((state) => !state);
+  };
+
+  const handleCommentChange = (text) => {
+    setComment(text);
+    if (error && text.trim()) setError(false); // clear error on valid input
   };
 
   useEffect(() => {
@@ -352,7 +396,7 @@ export const BugTracking = ({projectID = '', token = ''}) => {
   }, [btmSheetVisible]);
 
   return (
-    <View style={{zIndex: 999}}>
+    <View style={{ zIndex: 999 }}>
       <Fragment>
         {widgetVisible && <DraggableFab onPress={onScreenCapture} />}
         {/* {widgetVisible && (
@@ -390,10 +434,10 @@ export const BugTracking = ({projectID = '', token = ''}) => {
                 onPress={onReset}
                 rippleCentered
                 rippleColor="rgb(255, 251, 254)"
-                style={[styles.iconButton, {marginRight: 'auto'}]}>
+                style={[styles.iconButton, { marginRight: 'auto' }]}>
                 <Image
                   source={require('./assets/close.png')}
-                  style={{height: 24, width: 24}}
+                  style={{ height: 24, width: 24 }}
                 />
               </Ripple>
               <Ripple
@@ -403,21 +447,21 @@ export const BugTracking = ({projectID = '', token = ''}) => {
                 style={styles.iconButton}>
                 <Image
                   source={require('./assets/undo.png')}
-                  style={{height: 24, width: 24}}
+                  style={{ height: 24, width: 24 }}
                 />
               </Ripple>
               <RNAnimated.View
-                style={[styles.colorsContainer, {width: withAnim}]}>
+                style={[styles.colorsContainer, { width: withAnim }]}>
                 <Ripple
                   onPress={toggleOpen}
                   rippleCentered
                   rippleOpacity={0.12}
                   style={[
                     styles.colorButton,
-                    {backgroundColor: selectedColor, borderColor: '#fff'},
+                    { backgroundColor: selectedColor, borderColor: '#fff' },
                   ]}
                 />
-                {Colors.filter(c => c !== selectedColor).map((c, i) => (
+                {Colors.filter((c) => c !== selectedColor).map((c, i) => (
                   <Ripple
                     key={i}
                     onPress={onChangeSelectedColor(c)}
@@ -425,7 +469,7 @@ export const BugTracking = ({projectID = '', token = ''}) => {
                     rippleOpacity={0.12}
                     style={[
                       styles.colorButton,
-                      {backgroundColor: c, borderColor: c},
+                      { backgroundColor: c, borderColor: c },
                     ]}
                   />
                 ))}
@@ -433,7 +477,7 @@ export const BugTracking = ({projectID = '', token = ''}) => {
             </View>
             <ScrollView
               ref={viewRef}
-              contentContainerStyle={{alignItems: 'center'}}
+              contentContainerStyle={{ alignItems: 'center' }}
               style={styles.modalContainer}>
               <View
                 style={styles.svgContainer}
@@ -444,7 +488,7 @@ export const BugTracking = ({projectID = '', token = ''}) => {
                   <ImageBackground
                     ref={viewRef}
                     resizeMode="contain"
-                    source={{uri: src}}>
+                    source={{ uri: src }}>
                     <Svg height={height} width={width}>
                       <Path
                         d={currentPath.join('')}
@@ -455,7 +499,7 @@ export const BugTracking = ({projectID = '', token = ''}) => {
                         strokeLinecap={'round'}
                       />
                       {paths.length > 0 &&
-                        paths.map(({color, data}, index) => (
+                        paths.map(({ color, data }, index) => (
                           <Path
                             key={`path-${index}`}
                             d={data.join('')}
@@ -486,22 +530,36 @@ export const BugTracking = ({projectID = '', token = ''}) => {
               <BottomSheet
                 visible={btmSheetVisible}
                 onBackButtonPress={toggleBottomNavigationView}
-                onBackdropPress={toggleBottomNavigationView}>
+                onBackdropPress={toggleBottomNavigationView}
+                animationType="slide">
                 <View style={styles.bottomSheetContainer}>
                   <View style={styles.bottomSheetIndicator}></View>
                   <TextInput
                     ref={issueTitleRef}
-                    style={[styles.bottomSheetTextInput, {marginBottom: 13}]}
+                    style={[
+                      styles.bottomSheetTextInput,
+                      error && { borderColor: 'red' },
+                    ]}
                     keyboardType="name-phone-pad"
                     placeholder="Add issue title"
                     placeholderTextColor="#16064780"
                     value={comment}
-                    onChangeText={setComment}
+                    onChangeText={handleCommentChange}
                   />
+                  {error && (
+                    <View style={{ width: '100%' }}>
+                      <Text style={[styles.errorText]}>
+                        Please enter a comment before submitting
+                      </Text>
+                    </View>
+                  )}
                   <TextInput
-                    style={[styles.bottomSheetTextInput, {height: 164}]}
+                    style={[
+                      styles.bottomSheetTextInput,
+                      { height: 164, marginTop: 13 },
+                    ]}
                     keyboardType="name-phone-pad"
-                    placeholder="Add issue description"
+                    placeholder="Add issue description (optional)"
                     placeholderTextColor="#16064780"
                     multiline
                     numberOfLines={5}
@@ -511,7 +569,7 @@ export const BugTracking = ({projectID = '', token = ''}) => {
                   {loading ? (
                     <ActivityIndicator
                       color="#6552ff"
-                      style={{paddingHorizontal: 4}}
+                      style={{ paddingHorizontal: 4, marginTop: 13 }}
                     />
                   ) : (
                     <TouchableOpacity
@@ -533,10 +591,10 @@ export const BugTracking = ({projectID = '', token = ''}) => {
         </Modal>
         <Toast
           config={{
-            info: props => (
+            info: (props) => (
               <BaseToast
                 {...props}
-                style={{backgroundColor: '#6552ff', borderLeftWidth: 0}}
+                style={{ backgroundColor: '#6552ff', borderLeftWidth: 0 }}
                 text1Style={{
                   color: 'white',
                   fontWeight: '400',
@@ -555,14 +613,19 @@ const styles = StyleSheet.create({
     position: 'absolute',
     zIndex: Constants.zIndex,
   },
+  errorText: {
+    color: 'red',
+    fontSize: 12,
+    marginTop: 4,
+  },
   buttonContainer: {
     justifyContent: 'center',
     alignItems: 'center',
     height: 60,
     width: 60,
-    backgroundColor: Colors[0],
-    // backgroundColor: 'white',
-    borderRadius: 60 / 4,
+    // backgroundColor: Colors[0],
+    backgroundColor: 'white',
+    borderRadius: 60 / 2,
     zIndex: 1,
     shadowColor: '#000',
     shadowOffset: {
@@ -615,12 +678,6 @@ const styles = StyleSheet.create({
     height,
     width,
   },
-  // footerContainer: {
-  //   flexDirection: 'row',
-  //   alignItems: 'center',
-  //   paddingVertical: 4,
-  //   paddingHorizontal: 16,
-  // },
   textInput: {
     flex: 1,
     paddingVertical: 8,
@@ -644,12 +701,10 @@ const styles = StyleSheet.create({
   },
 
   footerContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: 'column',
     paddingHorizontal: 14,
     paddingVertical: 10,
     backgroundColor: '#ECECEC',
-    height: 65,
   },
   inputWrapper: {
     flexDirection: 'row',
@@ -717,7 +772,6 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     lineHeight: 19.5, // 130% of 15
     color: '#160647',
-    marginBottom: 13,
     textAlignVertical: 'top',
   },
   bottomSheetButtonContainer: {
@@ -726,6 +780,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 15,
     height: 48,
+    marginTop: 13,
   },
   submitButtonText: {
     color: '#FFFFFF',
@@ -735,6 +790,14 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     lineHeight: undefined, // 'normal' is default in React Native
     letterSpacing: -0.32,
+  },
+  commentContainer: {
+    width: '100%',
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: '100%',
   },
 });
 
