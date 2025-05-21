@@ -1,5 +1,5 @@
-import React, { Fragment, useEffect, useRef, useState } from 'react';
-import { BottomSheet } from 'react-native-btr';
+import React, {Fragment, useEffect, useRef, useState} from 'react';
+import {BottomSheet} from 'react-native-btr';
 import {
   Animated as RNAnimated,
   Dimensions,
@@ -18,13 +18,13 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import axios from 'axios';
-import { captureRef, captureScreen } from 'react-native-view-shot';
+import {captureRef, captureScreen} from 'react-native-view-shot';
 import Draggable from 'react-native-draggable';
 import Ripple from 'react-native-material-ripple';
-import { Path, Svg } from 'react-native-svg';
+import {Path, Svg} from 'react-native-svg';
 import PropTypes from 'prop-types';
-import Toast, { BaseToast } from 'react-native-toast-message';
-import { PanGestureHandler } from 'react-native-gesture-handler';
+import Toast, {BaseToast} from 'react-native-toast-message';
+import {PanGestureHandler} from 'react-native-gesture-handler';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -78,9 +78,9 @@ export const CommentInput = ({
           />
         </TouchableOpacity>
       </View>
-      <View style={{ width: 4 }} />
+      <View style={{width: 4}} />
       {loading ? (
-        <ActivityIndicator color="#6552ff" style={{ paddingHorizontal: 4 }} />
+        <ActivityIndicator color="#6552ff" style={{paddingHorizontal: 4}} />
       ) : (
         <TouchableOpacity
           disabled={comment === ''}
@@ -97,7 +97,7 @@ export const CommentInput = ({
   );
 };
 
-const DraggableFab = ({ onPress }) => {
+const DraggableFab = ({onPress}) => {
   const startX = Dimensions.get('window').width - 88;
   const startY = Dimensions.get('window').height - 88;
 
@@ -126,7 +126,7 @@ const DraggableFab = ({ onPress }) => {
   });
 
   const fabStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: x.value }, { translateY: y.value }],
+    transform: [{translateX: x.value}, {translateY: y.value}],
   }));
 
   return (
@@ -146,7 +146,7 @@ const DraggableFab = ({ onPress }) => {
           style={styles.buttonContainer}>
           <Image
             source={require('./assets/ruttl.png')}
-            style={{ width: 24, height: 24 }}
+            style={{width: 24, height: 24}}
           />
         </TouchableOpacity>
       </Animated.View>
@@ -154,7 +154,7 @@ const DraggableFab = ({ onPress }) => {
   );
 };
 
-export const BugTracking = ({ projectID = '', token = '' }) => {
+export const BugTracking = ({projectID = '', token = ''}) => {
   if (!projectID || !token) {
     throw new Error(
       `Error: Unable to find required prop 'projectID' or 'token' or both.`,
@@ -183,7 +183,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
   const [lastTouch, setLastTouch] = useState([-1, -1]);
   const issueTitleRef = useRef(null);
 
-  const onChangeSelectedColor = (color) => () => {
+  const onChangeSelectedColor = color => () => {
     setExpanded(false);
 
     setTimeout(() => {
@@ -204,7 +204,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
   const onScreenCapture = async () => {
     try {
       setWidgetVisible(false);
-      await new Promise((resolve) => {
+      await new Promise(resolve => {
         setTimeout(resolve, 100);
       });
 
@@ -239,7 +239,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
       const apiClient = axios.create({
         // baseURL: `https://us-central1-ruttlp.cloudfunctions.net/mobile/projects/${projectID}`,
         baseURL: `https://us-central1-rally-brucira.cloudfunctions.net/mobile/projects/${projectID}`,
-        headers: { 'x-plugin-code': token },
+        headers: {'x-plugin-code': token},
       });
 
       const saveData = {
@@ -253,7 +253,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
       };
 
       const {
-        data: { id: ticketID },
+        data: {id: ticketID},
       } = await apiClient.post('/tickets', saveData);
 
       await apiClient
@@ -267,7 +267,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
             text1: 'New ticket added successfully.',
           }),
         )
-        .catch((e) => console.log('Error is' + e));
+        .catch(e => console.log('Error is' + e));
 
       onReset();
     } catch (e) {
@@ -285,15 +285,15 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
     }
   };
 
-  const onTouchStart = (event) => {
+  const onTouchStart = event => {
     setLastTouch([event.nativeEvent.locationX, event.nativeEvent.locationY]);
     setTouch(true);
   };
 
-  const onTouchMove = (event) => {
+  const onTouchMove = event => {
     if (isTouch) {
       const newPath = [...currentPath];
-      const { locationX, locationY } = event.nativeEvent;
+      const {locationX, locationY} = event.nativeEvent;
       const newPoint = `${newPath.length === 0 ? 'M' : ''}${locationX.toFixed(
         0,
       )},${locationY.toFixed(0)} `;
@@ -320,17 +320,17 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
   const onTouchEnd = () => {
     const currentPaths = [...paths];
     const newPath = [...currentPath];
-    currentPaths.push({ color: selectedColor, data: newPath });
+    currentPaths.push({color: selectedColor, data: newPath});
     setPaths(currentPaths);
     setCurrentPath([]);
   };
 
   const onUndo = () => {
-    setPaths((state) => state.slice(0, -1));
+    setPaths(state => state.slice(0, -1));
   };
 
   const toggleOpen = () => {
-    setExpanded((state) => !state);
+    setExpanded(state => !state);
   };
 
   useEffect(() => {
@@ -352,7 +352,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
   }, [btmSheetVisible]);
 
   return (
-    <View style={{ zIndex: 999 }}>
+    <View style={{zIndex: 999}}>
       <Fragment>
         {widgetVisible && <DraggableFab onPress={onScreenCapture} />}
         {/* {widgetVisible && (
@@ -390,10 +390,10 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
                 onPress={onReset}
                 rippleCentered
                 rippleColor="rgb(255, 251, 254)"
-                style={[styles.iconButton, { marginRight: 'auto' }]}>
+                style={[styles.iconButton, {marginRight: 'auto'}]}>
                 <Image
                   source={require('./assets/close.png')}
-                  style={{ height: 24, width: 24 }}
+                  style={{height: 24, width: 24}}
                 />
               </Ripple>
               <Ripple
@@ -403,21 +403,21 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
                 style={styles.iconButton}>
                 <Image
                   source={require('./assets/undo.png')}
-                  style={{ height: 24, width: 24 }}
+                  style={{height: 24, width: 24}}
                 />
               </Ripple>
               <RNAnimated.View
-                style={[styles.colorsContainer, { width: withAnim }]}>
+                style={[styles.colorsContainer, {width: withAnim}]}>
                 <Ripple
                   onPress={toggleOpen}
                   rippleCentered
                   rippleOpacity={0.12}
                   style={[
                     styles.colorButton,
-                    { backgroundColor: selectedColor, borderColor: '#fff' },
+                    {backgroundColor: selectedColor, borderColor: '#fff'},
                   ]}
                 />
-                {Colors.filter((c) => c !== selectedColor).map((c, i) => (
+                {Colors.filter(c => c !== selectedColor).map((c, i) => (
                   <Ripple
                     key={i}
                     onPress={onChangeSelectedColor(c)}
@@ -425,7 +425,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
                     rippleOpacity={0.12}
                     style={[
                       styles.colorButton,
-                      { backgroundColor: c, borderColor: c },
+                      {backgroundColor: c, borderColor: c},
                     ]}
                   />
                 ))}
@@ -433,7 +433,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
             </View>
             <ScrollView
               ref={viewRef}
-              contentContainerStyle={{ alignItems: 'center' }}
+              contentContainerStyle={{alignItems: 'center'}}
               style={styles.modalContainer}>
               <View
                 style={styles.svgContainer}
@@ -444,7 +444,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
                   <ImageBackground
                     ref={viewRef}
                     resizeMode="contain"
-                    source={{ uri: src }}>
+                    source={{uri: src}}>
                     <Svg height={height} width={width}>
                       <Path
                         d={currentPath.join('')}
@@ -455,7 +455,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
                         strokeLinecap={'round'}
                       />
                       {paths.length > 0 &&
-                        paths.map(({ color, data }, index) => (
+                        paths.map(({color, data}, index) => (
                           <Path
                             key={`path-${index}`}
                             d={data.join('')}
@@ -491,7 +491,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
                   <View style={styles.bottomSheetIndicator}></View>
                   <TextInput
                     ref={issueTitleRef}
-                    style={[styles.bottomSheetTextInput, { marginBottom: 13 }]}
+                    style={[styles.bottomSheetTextInput, {marginBottom: 13}]}
                     keyboardType="name-phone-pad"
                     placeholder="Add issue title"
                     placeholderTextColor="#16064780"
@@ -499,7 +499,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
                     onChangeText={setComment}
                   />
                   <TextInput
-                    style={[styles.bottomSheetTextInput, { height: 164 }]}
+                    style={[styles.bottomSheetTextInput, {height: 164}]}
                     keyboardType="name-phone-pad"
                     placeholder="Add issue description"
                     placeholderTextColor="#16064780"
@@ -511,7 +511,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
                   {loading ? (
                     <ActivityIndicator
                       color="#6552ff"
-                      style={{ paddingHorizontal: 4 }}
+                      style={{paddingHorizontal: 4}}
                     />
                   ) : (
                     <TouchableOpacity
@@ -533,10 +533,10 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
         </Modal>
         <Toast
           config={{
-            info: (props) => (
+            info: props => (
               <BaseToast
                 {...props}
-                style={{ backgroundColor: '#6552ff', borderLeftWidth: 0 }}
+                style={{backgroundColor: '#6552ff', borderLeftWidth: 0}}
                 text1Style={{
                   color: 'white',
                   fontWeight: '400',
