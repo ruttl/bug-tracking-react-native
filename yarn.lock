@@ -3965,7 +3965,7 @@ react-native-animatable@1.4.0:
   dependencies:
     prop-types "^15.8.1"
 
-react-native-btr@^2.2.0:
+react-native-btr@^2.2.1:
   version "2.2.1"
   resolved "https://registry.yarnpkg.com/react-native-btr/-/react-native-btr-2.2.1.tgz#4124bd6a76dde2f804d74d4eafca9de9f96689a7"
   integrity sha512-k1SGpV5m7UmAfAKpbWIEHGswAc4+VwD+QBltvwMG9epdE2gfd0Yi7z7hhTwTfEEvwCr9BzwY0MuCJRGxJZ836A==
