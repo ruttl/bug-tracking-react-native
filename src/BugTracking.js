@@ -30,6 +30,7 @@ import Animated, {
   useAnimatedStyle,
   useAnimatedGestureHandler,
   withTiming,
+  runOnJS,
 } from 'react-native-reanimated';
 
 const Constants = {
@@ -46,6 +47,10 @@ const MARGIN = 0;
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const SCREEN_HEIGHT = Dimensions.get('window').height;
 const PADDING = 16;
+const START_POS = {
+  x: SCREEN_WIDTH - BUTTON_SIZE - PADDING,
+  y: SCREEN_HEIGHT - BUTTON_SIZE - PADDING,
+};
 
 export const CommentInput = ({
   comment,
@@ -67,7 +72,7 @@ export const CommentInput = ({
     onSubmit?.();
   };
 
-  const handleChange = (text) => {
+  const handleChange = text => {
     setComment(text);
     if (error && text.trim()) setError(false);
   };
@@ -117,9 +122,9 @@ export const CommentInput = ({
   );
 };
 
-const DraggableFab = ({ onPress }) => {
-  const startX = SCREEN_WIDTH - BUTTON_SIZE - PADDING;
-  const startY = SCREEN_HEIGHT - BUTTON_SIZE - PADDING;
+const DraggableFab = ({ onPress, onDragEnd, initialX, initialY }) => {
+  const startX = initialX;
+  const startY = initialY;
 
   const x = useSharedValue(startX);
   const y = useSharedValue(startY);
@@ -133,6 +138,7 @@ const DraggableFab = ({ onPress }) => {
       const newX = ctx.offsetX + event.translationX;
       const newY = ctx.offsetY + event.translationY;
 
+      // Clamp to screen bounds with margin
       x.value = Math.max(
         PADDING,
         Math.min(newX, SCREEN_WIDTH - BUTTON_SIZE - PADDING),
@@ -143,6 +149,7 @@ const DraggableFab = ({ onPress }) => {
       );
     },
     onEnd: () => {
+      // Find nearest corner
       const toLeft = x.value < SCREEN_WIDTH / 2;
       const toTop = y.value < SCREEN_HEIGHT / 2;
 
@@ -150,7 +157,9 @@ const DraggableFab = ({ onPress }) => {
       const finalY = toTop ? PADDING : SCREEN_HEIGHT - BUTTON_SIZE - PADDING;
 
       x.value = withTiming(finalX, { duration: 400 });
-      y.value = withTiming(finalY, { duration: 400 });
+      y.value = withTiming(finalY, { duration: 400 }, ()=>{
+        if (onDragEnd) runOnJS(onDragEnd)({ x: finalX, y: finalY });
+      });
     },
   });
 
@@ -213,10 +222,10 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
   const withAnim = useRef(new RNAnimated.Value(40)).current;
   const [lastTouch, setLastTouch] = useState([-1, -1]);
   const issueTitleRef = useRef(null);
+  const [fabPos, setFabPos] = useState(START_POS);
 
-  const onChangeSelectedColor = (color) => () => {
+  const onChangeSelectedColor = color => () => {
     setExpanded(false);
-
     setTimeout(() => {
       setSelectedColor(color);
     }, 500);
@@ -235,15 +244,12 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
   const onScreenCapture = async () => {
     try {
       setWidgetVisible(false);
-      await new Promise((resolve) => {
-        setTimeout(resolve, 100);
-      });
+      await new Promise(resolve => setTimeout(resolve, 100));
 
       const uri = await captureScreen({
         handleGLSurfaceViewOnAndroid: true,
         quality: 1,
       });
-
       setSrc(uri);
       setVisible(true);
     } catch (e) {
@@ -257,7 +263,6 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
         setError(true);
         if (timerRef.current) clearTimeout(timerRef.current);
         timerRef.current = setTimeout(() => setError(false), 3000);
-
         return;
       }
 
@@ -271,9 +276,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
         return;
       }
 
-      const uri = await captureRef(viewRef, {
-        result: 'data-uri',
-      });
+      const uri = await captureRef(viewRef, { result: 'data-uri' });
 
       const apiClient = axios.create({
         // baseURL: `https://us-central1-ruttlp.cloudfunctions.net/mobile/projects/${projectID}`,
@@ -296,9 +299,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
       } = await apiClient.post('/tickets', saveData);
 
       await apiClient
-        .post(`/tickets/${ticketID}/screenshot`, {
-          image: uri,
-        })
+        .post(`/tickets/${ticketID}/screenshot`, { image: uri })
         .then(() =>
           Toast.show({
             position: 'top',
@@ -306,7 +307,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
             text1: 'New ticket added successfully.',
           }),
         )
-        .catch((e) => console.log('Error is' + e));
+        .catch(e => console.log('Error is' + e));
 
       onReset();
     } catch (e) {
@@ -324,12 +325,12 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
     }
   };
 
-  const onTouchStart = (event) => {
+  const onTouchStart = event => {
     setLastTouch([event.nativeEvent.locationX, event.nativeEvent.locationY]);
     setTouch(true);
   };
 
-  const onTouchMove = (event) => {
+  const onTouchMove = event => {
     if (isTouch) {
       const newPath = [...currentPath];
       const { locationX, locationY } = event.nativeEvent;
@@ -364,17 +365,15 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
     setCurrentPath([]);
   };
 
-  const onUndo = () => {
-    setPaths((state) => state.slice(0, -1));
-  };
+  const onUndo = () => setPaths(state => state.slice(0, -1));
 
-  const toggleOpen = () => {
-    setExpanded((state) => !state);
-  };
+  const toggleOpen = () => setExpanded(state => !state);
 
-  const handleCommentChange = (text) => {
+  const handleCommentChange = text => {
     setComment(text);
-    if (error && text.trim()) setError(false); // clear error on valid input
+    if (error && text.trim()) {
+      setError(false);
+    }
   };
 
   useEffect(() => {
@@ -398,35 +397,8 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
   return (
     <View style={{ zIndex: 999 }}>
       <Fragment>
-        {widgetVisible && <DraggableFab onPress={onScreenCapture} />}
-        {/* {widgetVisible && (
-          <Draggable
-            isCircle
-            minX={0}
-            minY={0}
-            maxX={Dimensions.get('window').width}
-            maxY={Dimensions.get('window').height}
-            onShortPressRelease={onScreenCapture}
-            renderColor={Colors[0]}
-            renderSize={72}
-            onDrag={() => {}}
-            onPressOut={() => {}}
-            onRelease={() => {}}
-            touchableOpacityProps={{activeOpacity: 0}}
-            x={Dimensions.get('window').width - (72 + 16)}
-            y={Dimensions.get('window').height - (72 + 16)}
-            z={Constants.zIndex}>
-            <View style={[styles.buttonContainer]}>
-              <Image
-                source={require('./assets/ruttl.png')}
-                style={{
-                  width: 24,
-                  height: 24,
-                }}
-              />
-            </View>
-          </Draggable>
-        )} */}
+        {widgetVisible && <DraggableFab onPress={onScreenCapture} initialX={fabPos.x} initialY={fabPos.y} onDragEnd={setFabPos} />}
+
         <Modal animationType="slide" transparent visible={visible}>
           <SafeAreaView style={styles.modalContainer}>
             <View style={styles.appbarContainer}>
@@ -461,7 +433,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
                     { backgroundColor: selectedColor, borderColor: '#fff' },
                   ]}
                 />
-                {Colors.filter((c) => c !== selectedColor).map((c, i) => (
+                {Colors.filter(c => c !== selectedColor).map((c, i) => (
                   <Ripple
                     key={i}
                     onPress={onChangeSelectedColor(c)}
@@ -591,7 +563,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
         </Modal>
         <Toast
           config={{
-            info: (props) => (
+            info: props => (
               <BaseToast
                 {...props}
                 style={{ backgroundColor: '#6552ff', borderLeftWidth: 0 }}
@@ -623,9 +595,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     height: 60,
     width: 60,
-    backgroundColor: Colors[0],
-    // backgroundColor: 'white',
-    borderRadius: 60 / 4,
+    // backgroundColor: Colors[0],
+    backgroundColor: 'white',
+    borderRadius: 60 / 2,
     zIndex: 1,
     shadowColor: '#000',
     shadowOffset: {
@@ -712,7 +684,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E7E7E7',
     borderRadius: 10,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#FFF',
     paddingHorizontal: 10,
     height: 45,
     flex: 1,
@@ -722,9 +694,9 @@ const styles = StyleSheet.create({
     color: '#160647',
     backgroundColor: '#FFFFFF',
     fontSize: 15,
-    fontFamily: 'Inter-Medium', // make sure it's loaded via font loader
-    lineHeight: 19.5, // 130% of 15px
-    fontWeight: '500', // for Android consistency
+    fontFamily: 'Inter-Medium',
+    lineHeight: 19.5,
+    fontWeight: '500',
     overflow: 'hidden',
   },
   rightIconContainer: {
@@ -766,7 +738,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 5,
     paddingHorizontal: 13,
-    fontFamily: 'Inter-Medium', // Or 'Inter' if you're using default variant
+    fontFamily: 'Inter-Medium',
     fontSize: 15,
     fontStyle: 'normal',
     fontWeight: '500',
@@ -784,11 +756,11 @@ const styles = StyleSheet.create({
   },
   submitButtonText: {
     color: '#FFFFFF',
-    fontFamily: 'Inter-SemiBold', // Or 'Inter' if you're using the default
+    fontFamily: 'Inter-SemiBold',
     fontSize: 16,
     fontStyle: 'normal',
     fontWeight: '600',
-    lineHeight: undefined, // 'normal' is default in React Native
+    lineHeight: undefined,
     letterSpacing: -0.32,
   },
   commentContainer: {

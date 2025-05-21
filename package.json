@@ -1,6 +1,6 @@
 {
   "name": "@ruttl/bug-tracking",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "React Native plugin for bug tracking via Ruttl",
   "main": "lib/commonjs/index.js",
   "module": "lib/module/index.js",
@@ -56,12 +56,12 @@
     "react-native-view-shot": "^3.6.0",
     "react-native-gesture-handler": "^2.25.0",
     "react-native-reanimated": "^3.17.5",
-    "react-native-btr": "^2.2.0"
+    "react-native-btr": "^2.2.1"
   },
   "dependencies": {
     "axios": "^1.4.0",
     "prop-types": "^15.8.1",
-    "react-native-btr": "^2.2.0",
+    "react-native-btr": "^2.2.1",
     "react-native-draggable": "^3.3.0",
     "react-native-material-ripple": "^0.9.1",
     "react-native-toast-message": "^2.1.6"
