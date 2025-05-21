@@ -51,10 +51,12 @@
   "peerDependencies": {
     "react-native": ">=0.71.0",
     "react": ">=18.0.0",
+     "react-native-builder-bob": "^0.20.4",
     "react-native-svg": "^13.9.0",
     "react-native-view-shot": "^3.6.0",
     "react-native-gesture-handler": "^2.25.0",
-    "react-native-reanimated": "^3.17.5"
+    "react-native-reanimated": "^3.17.5",
+    "react-native-btr": "^2.2.0"
   },
   "dependencies": {
     "axios": "^1.4.0",
