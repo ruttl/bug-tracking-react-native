@@ -1,13 +1,12 @@
 import React, { Fragment, useEffect, useRef, useState } from 'react';
 import { BottomSheet } from 'react-native-btr';
 import {
-  Animated,
+  Animated as RNAnimated,
   Dimensions,
   Image,
   ImageBackground,
   KeyboardAvoidingView,
   Modal,
-  Pressable,
   Platform,
   SafeAreaView,
   ScrollView,
@@ -16,7 +15,6 @@ import {
   TextInput,
   View,
   ActivityIndicator,
-  Button,
   TouchableOpacity,
 } from 'react-native';
 import axios from 'axios';
@@ -26,46 +24,153 @@ import Ripple from 'react-native-material-ripple';
 import { Path, Svg } from 'react-native-svg';
 import PropTypes from 'prop-types';
 import Toast, { BaseToast } from 'react-native-toast-message';
+import { PanGestureHandler } from 'react-native-gesture-handler';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  useAnimatedGestureHandler,
+} from 'react-native-reanimated';
 
 const Constants = {
   zIndex: 999999999,
   aspectRatio: Dimensions.get('window').width / Dimensions.get('window').height,
 };
-
-const height = Dimensions.get('window').height * 0.72; // reduce height by 30%
-
+const height = Dimensions.get('window').height * 0.72;
 const width = height * Constants.aspectRatio;
-
 const Colors = ['#160647', '#FF4F6D', '#FCFF52'];
-
 const InitialColor = Colors[1];
 
-const BugTracking = ({ projectID, token }) => {
-  if (!projectID || !token || (!projectID && !token)) {
+const BUTTON_SIZE = 72;
+const MARGIN = 0;
+const SCREEN_WIDTH = Dimensions.get('window').width;
+const SCREEN_HEIGHT = Dimensions.get('window').height;
+
+if (!global._REANIMATED_VERSION) {
+  console.warn(
+    '⚠️ You need to import `react-native-reanimated` at the top of your entry file.',
+  );
+}
+
+export const CommentInput = ({
+  comment,
+  setComment,
+  toggleBottomNavigationView,
+  loading,
+  onSubmit,
+}) => {
+  return (
+    <>
+      <View style={styles.inputWrapper}>
+        <TextInput
+          placeholder="Report the issue"
+          placeholderTextColor="#16064780"
+          onChangeText={setComment}
+          style={styles.singleTextInput}
+          value={comment}
+          focusable={false}
+          // onPressOut={toggleBottomNavigationView}
+        />
+        <TouchableOpacity onPress={toggleBottomNavigationView}>
+          <Image
+            source={require('./assets/chat-icon.png')}
+            style={styles.iconImage}
+            resizeMode="cover"
+          />
+        </TouchableOpacity>
+      </View>
+      <View style={{ width: 4 }} />
+      {loading ? (
+        <ActivityIndicator color="#6552ff" style={{ paddingHorizontal: 4 }} />
+      ) : (
+        <TouchableOpacity
+          disabled={comment === ''}
+          onPress={onSubmit}
+          style={styles.rightIconContainer}>
+          <Image
+            source={require('./assets/arrow-right.png')}
+            style={styles.rightIcon}
+            resizeMode="cover"
+          />
+        </TouchableOpacity>
+      )}
+    </>
+  );
+};
+
+const DraggableFab = ({ onPress }) => {
+  const startX = Dimensions.get('window').width - 88;
+  const startY = Dimensions.get('window').height - 88;
+
+  // shared values track position
+  const x = useSharedValue(startX);
+  const y = useSharedValue(startY);
+
+  const gesture = useAnimatedGestureHandler({
+    onStart: (_, ctx) => {
+      ctx.offsetX = x.value;
+      ctx.offsetY = y.value;
+    },
+    onActive: (event, ctx) => {
+      const newX = ctx.offsetX + event.translationX;
+      const newY = ctx.offsetY + event.translationY;
+
+      x.value = Math.max(
+        MARGIN,
+        Math.min(newX, SCREEN_WIDTH - BUTTON_SIZE - MARGIN),
+      );
+      y.value = Math.max(
+        MARGIN,
+        Math.min(newY, SCREEN_HEIGHT - BUTTON_SIZE - MARGIN),
+      );
+    },
+  });
+
+  const fabStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: x.value }, { translateY: y.value }],
+  }));
+
+  return (
+    <PanGestureHandler onGestureEvent={gesture}>
+      <Animated.View
+        style={[
+          {
+            position: 'absolute',
+            pointerEvents: 'box-none',
+            zIndex: Constants.zIndex,
+          },
+          fabStyle,
+        ]}>
+        <TouchableOpacity
+          activeOpacity={0.7}
+          onPress={onPress}
+          style={styles.buttonContainer}>
+          <Image
+            source={require('./assets/ruttl.png')}
+            style={{ width: 24, height: 24 }}
+          />
+        </TouchableOpacity>
+      </Animated.View>
+    </PanGestureHandler>
+  );
+};
+
+export const BugTracking = ({ projectID = '', token = '' }) => {
+  if (!projectID || !token) {
     throw new Error(
       `Error: Unable to find required prop 'projectID' or 'token' or both.`,
     );
   }
 
   const viewRef = useRef();
-
   const [comment, setComment] = useState('');
   const [description, setDescription] = useState('');
-
   const [currentPath, setCurrentPath] = useState([]);
-
   const [expanded, setExpanded] = useState(false);
-
   const [loading, setLoading] = useState(false);
-
   const [paths, setPaths] = useState([]);
-
   const [selectedColor, setSelectedColor] = useState(InitialColor);
-
   const [src, setSrc] = useState('');
-
   const [visible, setVisible] = useState(false);
-
   const [btmSheetVisible, setbtmSheetVisible] = useState(false);
 
   const toggleBottomNavigationView = () => {
@@ -73,12 +178,10 @@ const BugTracking = ({ projectID, token }) => {
   };
 
   const [isTouch, setTouch] = useState(false);
-
   const [widgetVisible, setWidgetVisible] = useState(true);
-
-  const withAnim = useRef(new Animated.Value(40)).current;
-
-  const issueTitleRef = useRef();
+  const withAnim = useRef(new RNAnimated.Value(40)).current;
+  const [lastTouch, setLastTouch] = useState([-1, -1]);
+  const issueTitleRef = useRef(null);
 
   const onChangeSelectedColor = (color) => () => {
     setExpanded(false);
@@ -88,27 +191,19 @@ const BugTracking = ({ projectID, token }) => {
     }, 500);
   };
 
-  const [lastTouch, setLastTouch] = useState([-1, -1]);
-
   const onReset = () => {
     setComment('');
     setDescription('');
-
     setCurrentPath([]);
-
     setSrc('');
-
     setPaths([]);
-
     setVisible(false);
-
     setWidgetVisible(true);
   };
 
   const onScreenCapture = async () => {
     try {
       setWidgetVisible(false);
-
       await new Promise((resolve) => {
         setTimeout(resolve, 100);
       });
@@ -119,7 +214,6 @@ const BugTracking = ({ projectID, token }) => {
       });
 
       setSrc(uri);
-
       setVisible(true);
     } catch (e) {
       setWidgetVisible(true);
@@ -129,29 +223,38 @@ const BugTracking = ({ projectID, token }) => {
   const onSubmit = async () => {
     try {
       setLoading(true);
+      if (!viewRef.current) {
+        Toast.show({
+          type: 'error',
+          text1: 'Capture error',
+          text2: 'Screenshot view is not available.',
+        });
+        return;
+      }
 
       const uri = await captureRef(viewRef, {
         result: 'data-uri',
       });
 
       const apiClient = axios.create({
-        baseURL: `https://us-central1-ruttlp.cloudfunctions.net/mobile/projects/${projectID}`,
-        headers: {
-          'x-plugin-code': token,
-        },
+        // baseURL: `https://us-central1-ruttlp.cloudfunctions.net/mobile/projects/${projectID}`,
+        baseURL: `https://us-central1-rally-brucira.cloudfunctions.net/mobile/projects/${projectID}`,
+        headers: { 'x-plugin-code': token },
       });
 
-      const {
-        data: { id: ticketID },
-      } = await apiClient.post('/tickets', {
+      const saveData = {
         comment,
-        description,
+        description: btmSheetVisible ? description : null,
         // appVersion: '1.0.0',
         // device: 'iPhone',
         height: Dimensions.get('window').height,
         osName: Platform.OS,
         width: Dimensions.get('window').width,
-      });
+      };
+
+      const {
+        data: { id: ticketID },
+      } = await apiClient.post('/tickets', saveData);
 
       await apiClient
         .post(`/tickets/${ticketID}/screenshot`, {
@@ -168,13 +271,14 @@ const BugTracking = ({ projectID, token }) => {
 
       onReset();
     } catch (e) {
-      console.log('Error in request '+e)
+      console.log('Error in request ' + e);
       onReset();
 
       Toast.show({
         position: 'top',
         type: 'info',
-        text1: 'Something went wrong, try again.',
+        text1: 'Something went wrong',
+        text2: e?.message,
       });
     } finally {
       setLoading(false);
@@ -189,9 +293,7 @@ const BugTracking = ({ projectID, token }) => {
   const onTouchMove = (event) => {
     if (isTouch) {
       const newPath = [...currentPath];
-
       const { locationX, locationY } = event.nativeEvent;
-
       const newPoint = `${newPath.length === 0 ? 'M' : ''}${locationX.toFixed(
         0,
       )},${locationY.toFixed(0)} `;
@@ -217,13 +319,9 @@ const BugTracking = ({ projectID, token }) => {
 
   const onTouchEnd = () => {
     const currentPaths = [...paths];
-
     const newPath = [...currentPath];
-
     currentPaths.push({ color: selectedColor, data: newPath });
-
     setPaths(currentPaths);
-
     setCurrentPath([]);
   };
 
@@ -236,25 +334,28 @@ const BugTracking = ({ projectID, token }) => {
   };
 
   useEffect(() => {
-    Animated.timing(withAnim, {
+    RNAnimated.timing(withAnim, {
       toValue: 40 * (expanded ? 3 : 1),
       duration: 500,
       useNativeDriver: false,
     }).start();
   }, [expanded, withAnim]);
 
-  useEffect(()=>{
-    if(btmSheetVisible){
-      setTimeout(() => {
-        issueTitleRef.current.focus()
-      }, 200)
+  useEffect(() => {
+    let timeout;
+    if (btmSheetVisible) {
+      timeout = setTimeout(() => {
+        issueTitleRef.current?.focus();
+      }, 200);
     }
-  },[btmSheetVisible]);
+    return () => clearTimeout(timeout);
+  }, [btmSheetVisible]);
 
   return (
     <View style={{ zIndex: 999 }}>
       <Fragment>
-        {widgetVisible && (
+        {widgetVisible && <DraggableFab onPress={onScreenCapture} />}
+        {/* {widgetVisible && (
           <Draggable
             isCircle
             minX={0}
@@ -264,21 +365,24 @@ const BugTracking = ({ projectID, token }) => {
             onShortPressRelease={onScreenCapture}
             renderColor={Colors[0]}
             renderSize={72}
-            touchableOpacityProps={{ activeOpacity: 0 }}
+            onDrag={() => {}}
+            onPressOut={() => {}}
+            onRelease={() => {}}
+            touchableOpacityProps={{activeOpacity: 0}}
             x={Dimensions.get('window').width - (72 + 16)}
             y={Dimensions.get('window').height - (72 + 16)}
             z={Constants.zIndex}>
             <View style={[styles.buttonContainer]}>
               <Image
-                source={require('./assets/bug.png')}
+                source={require('./assets/ruttl.png')}
                 style={{
-                  width: 32,
-                  height: 32,
+                  width: 24,
+                  height: 24,
                 }}
               />
             </View>
           </Draggable>
-        )}
+        )} */}
         <Modal animationType="slide" transparent visible={visible}>
           <SafeAreaView style={styles.modalContainer}>
             <View style={styles.appbarContainer}>
@@ -302,7 +406,7 @@ const BugTracking = ({ projectID, token }) => {
                   style={{ height: 24, width: 24 }}
                 />
               </Ripple>
-              <Animated.View
+              <RNAnimated.View
                 style={[styles.colorsContainer, { width: withAnim }]}>
                 <Ripple
                   onPress={toggleOpen}
@@ -325,9 +429,10 @@ const BugTracking = ({ projectID, token }) => {
                     ]}
                   />
                 ))}
-              </Animated.View>
+              </RNAnimated.View>
             </View>
             <ScrollView
+              ref={viewRef}
               contentContainerStyle={{ alignItems: 'center' }}
               style={styles.modalContainer}>
               <View
@@ -369,48 +474,24 @@ const BugTracking = ({ projectID, token }) => {
             <KeyboardAvoidingView
               behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
               style={styles.footerContainer}>
-              <TextInput
-                placeholder="Write a comment"
-                placeholderTextColor="#16064780"
-                onChangeText={setComment}
-                style={styles.textInput}
-                value={comment}
-                focusable={false}
-                onPressOut={toggleBottomNavigationView}
-              />
-              <View style={{ width: 4 }} />
-              {loading ? (
-                <ActivityIndicator
-                  color="#6552ff"
-                  style={{ paddingHorizontal: 4 }}
+              {!btmSheetVisible && (
+                <CommentInput
+                  comment={comment}
+                  setComment={setComment}
+                  toggleBottomNavigationView={toggleBottomNavigationView}
+                  loading={loading}
+                  onSubmit={onSubmit}
                 />
-              ) : (
-                <Pressable
-                  disabled={comment === ''}
-                  onPress={onSubmit}
-                  style={styles.button}>
-                  <Text style={{ color: 'white' }}>Send</Text>
-                </Pressable>
               )}
               <BottomSheet
                 visible={btmSheetVisible}
                 onBackButtonPress={toggleBottomNavigationView}
                 onBackdropPress={toggleBottomNavigationView}>
-                <View
-                  style={{
-                    padding: 16,
-                    backgroundColor: '#fff',
-                    borderTopLeftRadius: 16,
-                    borderTopRightRadius: 16,
-                    alignItems: 'center',
-                  }}>
+                <View style={styles.bottomSheetContainer}>
+                  <View style={styles.bottomSheetIndicator}></View>
                   <TextInput
                     ref={issueTitleRef}
-                    style={{
-                      width: '100%',
-                      color: '#160647',
-                      fontSize: 17,
-                    }}
+                    style={[styles.bottomSheetTextInput, { marginBottom: 13 }]}
                     keyboardType="name-phone-pad"
                     placeholder="Add issue title"
                     placeholderTextColor="#16064780"
@@ -418,18 +499,7 @@ const BugTracking = ({ projectID, token }) => {
                     onChangeText={setComment}
                   />
                   <TextInput
-                    style={{
-                      width: '100%',
-                      marginTop: 24,
-                      marginBottom: 15,
-                      borderRadius: 5,
-                      borderColor: '#E7E7E7',
-                      borderWidth: 1,
-                      fontSize: 15,
-                      padding: 8,
-                      textAlignVertical: 'top',
-                      color: '#160647',
-                    }}
+                    style={[styles.bottomSheetTextInput, { height: 164 }]}
                     keyboardType="name-phone-pad"
                     placeholder="Add issue description"
                     placeholderTextColor="#16064780"
@@ -446,15 +516,14 @@ const BugTracking = ({ projectID, token }) => {
                   ) : (
                     <TouchableOpacity
                       onPress={onSubmit}
-                      style={{
-                        width: '100%',
-                        backgroundColor:
-                          comment !== '' ? '#6552FF' : '#6552FF80',
-                        borderRadius: 4,
-                        alignItems: 'center',
-                        padding: 15,
-                      }}>
-                      <Text style={{ color: '#fff' }}>Submit</Text>
+                      style={[
+                        styles.bottomSheetButtonContainer,
+                        {
+                          backgroundColor:
+                            comment !== '' ? '#6552FF' : '#6552FF80',
+                        },
+                      ]}>
+                      <Text style={styles.submitButtonText}>Submit</Text>
                     </TouchableOpacity>
                   )}
                 </View>
@@ -489,10 +558,11 @@ const styles = StyleSheet.create({
   buttonContainer: {
     justifyContent: 'center',
     alignItems: 'center',
-    height: 72,
-    width: 72,
+    height: 60,
+    width: 60,
     backgroundColor: Colors[0],
-    borderRadius: 72 / 2,
+    // backgroundColor: 'white',
+    borderRadius: 60 / 4,
     zIndex: 1,
     shadowColor: '#000',
     shadowOffset: {
@@ -501,7 +571,6 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.3,
     shadowRadius: 4.65,
-
     elevation: 8,
   },
   modalContainer: {
@@ -546,12 +615,12 @@ const styles = StyleSheet.create({
     height,
     width,
   },
-  footerContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 4,
-    paddingHorizontal: 16,
-  },
+  // footerContainer: {
+  //   flexDirection: 'row',
+  //   alignItems: 'center',
+  //   paddingVertical: 4,
+  //   paddingHorizontal: 16,
+  // },
   textInput: {
     flex: 1,
     paddingVertical: 8,
@@ -572,6 +641,100 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     elevation: 0,
     backgroundColor: '#6552ff',
+  },
+
+  footerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    backgroundColor: '#ECECEC',
+    height: 65,
+  },
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E7E7E7',
+    borderRadius: 10,
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 10,
+    height: 45,
+    flex: 1,
+  },
+  singleTextInput: {
+    flex: 1,
+    color: '#160647',
+    backgroundColor: '#FFFFFF',
+    fontSize: 15,
+    fontFamily: 'Inter-Medium', // make sure it's loaded via font loader
+    lineHeight: 19.5, // 130% of 15px
+    fontWeight: '500', // for Android consistency
+    overflow: 'hidden',
+  },
+  rightIconContainer: {
+    height: 40,
+    width: 40,
+    backgroundColor: '#6552ff',
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  rightIcon: {
+    height: 24,
+    width: 24,
+  },
+  iconImage: {
+    width: 24,
+    height: 24,
+    marginLeft: 8,
+  },
+  bottomSheetContainer: {
+    paddingHorizontal: 16,
+    padding: 10,
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    alignItems: 'center',
+  },
+  bottomSheetIndicator: {
+    width: 48,
+    height: 5,
+    borderRadius: 8,
+    backgroundColor: '#E4E4E4',
+    marginBottom: 20,
+  },
+  bottomSheetTextInput: {
+    width: '100%',
+    height: 45,
+    borderColor: '#E7E7E7',
+    borderWidth: 1,
+    borderRadius: 5,
+    paddingHorizontal: 13,
+    fontFamily: 'Inter-Medium', // Or 'Inter' if you're using default variant
+    fontSize: 15,
+    fontStyle: 'normal',
+    fontWeight: '500',
+    lineHeight: 19.5, // 130% of 15
+    color: '#160647',
+    marginBottom: 13,
+    textAlignVertical: 'top',
+  },
+  bottomSheetButtonContainer: {
+    width: '100%',
+    borderRadius: 8,
+    alignItems: 'center',
+    padding: 15,
+    height: 48,
+  },
+  submitButtonText: {
+    color: '#FFFFFF',
+    fontFamily: 'Inter-SemiBold', // Or 'Inter' if you're using the default
+    fontSize: 16,
+    fontStyle: 'normal',
+    fontWeight: '600',
+    lineHeight: undefined, // 'normal' is default in React Native
+    letterSpacing: -0.32,
   },
 });
 
