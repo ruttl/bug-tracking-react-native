@@ -245,10 +245,21 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
         handleGLSurfaceViewOnAndroid: true,
         quality: 1,
       });
-      setSrc(uri);
-      setVisible(true);
+
+      if (uri) {
+        setSrc(uri);
+        setVisible(true);
+      } else {
+        throw new Error('Unsupported view on the screenshot.');
+      }
     } catch (e) {
       setWidgetVisible(true);
+      const message = e.message || 'Something went wrong while taking the screenshot.';
+      Toast.show({
+        type: 'error',
+        text1: 'Capture error',
+        text2: message,
+      });
     }
   };
 
