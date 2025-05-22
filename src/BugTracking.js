@@ -1,4 +1,4 @@
-import React, { Fragment, useEffect, useRef, useState } from 'react';
+import React, { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { BottomSheet } from 'react-native-btr';
 import {
   Animated as RNAnimated,
@@ -19,7 +19,6 @@ import {
 } from 'react-native';
 import axios from 'axios';
 import { captureRef, captureScreen } from 'react-native-view-shot';
-import Draggable from 'react-native-draggable';
 import Ripple from 'react-native-material-ripple';
 import { Path, Svg } from 'react-native-svg';
 import PropTypes from 'prop-types';
@@ -43,7 +42,6 @@ const Colors = ['#160647', '#FF4F6D', '#FCFF52'];
 const InitialColor = Colors[1];
 
 const BUTTON_SIZE = 72;
-const MARGIN = 0;
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const SCREEN_HEIGHT = Dimensions.get('window').height;
 const PADDING = 16;
@@ -60,13 +58,10 @@ export const CommentInput = ({
   onSubmit,
 }) => {
   const [error, setError] = React.useState(false);
-  const resetTimer = React.useRef(null);
 
   const handleSubmit = () => {
     if (!comment.trim()) {
       setError(true);
-      if (resetTimer.current) clearTimeout(resetTimer.current);
-      resetTimer.current = setTimeout(() => setError(false), 3000);
       return;
     }
     onSubmit?.();
@@ -83,7 +78,7 @@ export const CommentInput = ({
         <View style={[styles.inputWrapper, error && { borderColor: 'red' }]}>
           <TextInput
             placeholder={'Report the issue'}
-            placeholderTextColor={'#16064780'}
+            placeholderTextColor={error ? 'red' : '#16064780'}
             onChangeText={handleChange}
             value={comment}
             style={styles.singleTextInput}
@@ -141,11 +136,11 @@ const DraggableFab = ({ onPress, onDragEnd, initialX, initialY }) => {
       // Clamp to screen bounds with margin
       x.value = Math.max(
         PADDING,
-        Math.min(newX, SCREEN_WIDTH - BUTTON_SIZE - PADDING),
+        Math.min(newX, SCREEN_WIDTH - BUTTON_SIZE),
       );
       y.value = Math.max(
         PADDING,
-        Math.min(newY, SCREEN_HEIGHT - BUTTON_SIZE - PADDING),
+        Math.min(newY, SCREEN_HEIGHT - BUTTON_SIZE),
       );
     },
     onEnd: () => {
@@ -153,11 +148,11 @@ const DraggableFab = ({ onPress, onDragEnd, initialX, initialY }) => {
       const toLeft = x.value < SCREEN_WIDTH / 2;
       const toTop = y.value < SCREEN_HEIGHT / 2;
 
-      const finalX = toLeft ? PADDING : SCREEN_WIDTH - BUTTON_SIZE - PADDING;
-      const finalY = toTop ? PADDING : SCREEN_HEIGHT - BUTTON_SIZE - PADDING;
+      const finalX = toLeft ? PADDING : SCREEN_WIDTH - BUTTON_SIZE;
+      const finalY = toTop ? PADDING : SCREEN_HEIGHT - BUTTON_SIZE;
 
       x.value = withTiming(finalX, { duration: 400 });
-      y.value = withTiming(finalY, { duration: 400 }, ()=>{
+      y.value = withTiming(finalY, { duration: 400 }, () => {
         if (onDragEnd) runOnJS(onDragEnd)({ x: finalX, y: finalY });
       });
     },
@@ -261,8 +256,6 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
     try {
       if (!comment.trim()) {
         setError(true);
-        if (timerRef.current) clearTimeout(timerRef.current);
-        timerRef.current = setTimeout(() => setError(false), 3000);
         return;
       }
 
@@ -394,10 +387,22 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
     return () => clearTimeout(timeout);
   }, [btmSheetVisible]);
 
+  const buttonColor = useMemo(
+    () => (comment?.trim() !== '' ? '#6552FF' : '#6552FF80'),
+    [comment],
+  );
+
   return (
     <View style={{ zIndex: 999 }}>
       <Fragment>
-        {widgetVisible && <DraggableFab onPress={onScreenCapture} initialX={fabPos.x} initialY={fabPos.y} onDragEnd={setFabPos} />}
+        {widgetVisible && (
+          <DraggableFab
+            onPress={onScreenCapture}
+            initialX={fabPos.x}
+            initialY={fabPos.y}
+            onDragEnd={setFabPos}
+          />
+        )}
 
         <Modal animationType="slide" transparent visible={visible}>
           <SafeAreaView style={styles.modalContainer}>
@@ -490,15 +495,13 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
             <KeyboardAvoidingView
               behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
               style={styles.footerContainer}>
-              {!btmSheetVisible && (
-                <CommentInput
-                  comment={comment}
-                  setComment={setComment}
-                  toggleBottomNavigationView={toggleBottomNavigationView}
-                  loading={loading}
-                  onSubmit={onSubmit}
-                />
-              )}
+              <CommentInput
+                comment={comment}
+                setComment={setComment}
+                toggleBottomNavigationView={toggleBottomNavigationView}
+                loading={loading}
+                onSubmit={onSubmit}
+              />
               <BottomSheet
                 visible={btmSheetVisible}
                 onBackButtonPress={toggleBottomNavigationView}
@@ -538,24 +541,18 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
                     value={description}
                     onChangeText={setDescription}
                   />
-                  {loading ? (
-                    <ActivityIndicator
-                      color="#6552ff"
-                      style={{ paddingHorizontal: 4, marginTop: 13 }}
-                    />
-                  ) : (
-                    <TouchableOpacity
-                      onPress={onSubmit}
-                      style={[
-                        styles.bottomSheetButtonContainer,
-                        {
-                          backgroundColor:
-                            comment !== '' ? '#6552FF' : '#6552FF80',
-                        },
-                      ]}>
+                  <TouchableOpacity
+                    onPress={onSubmit}
+                    style={[
+                      styles.bottomSheetButtonContainer,
+                      { backgroundColor: buttonColor },
+                    ]}>
+                    {loading ? (
+                      <ActivityIndicator color="#fff" />
+                    ) : (
                       <Text style={styles.submitButtonText}>Submit</Text>
-                    </TouchableOpacity>
-                  )}
+                    )}
+                  </TouchableOpacity>
                 </View>
               </BottomSheet>
             </KeyboardAvoidingView>
