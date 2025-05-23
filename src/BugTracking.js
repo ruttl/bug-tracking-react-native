@@ -44,7 +44,7 @@ const InitialColor = Colors[1];
 const BUTTON_SIZE = 72;
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const SCREEN_HEIGHT = Dimensions.get('window').height;
-const PADDING = 16;
+const PADDING = 24;
 const START_POS = {
   x: SCREEN_WIDTH - BUTTON_SIZE - PADDING,
   y: SCREEN_HEIGHT - BUTTON_SIZE - PADDING,
@@ -133,14 +133,13 @@ const DraggableFab = ({ onPress, onDragEnd, initialX, initialY }) => {
       const newX = ctx.offsetX + event.translationX;
       const newY = ctx.offsetY + event.translationY;
 
-      // Clamp to screen bounds with margin
       x.value = Math.max(
         PADDING,
-        Math.min(newX, SCREEN_WIDTH - BUTTON_SIZE),
+        Math.min(newX, SCREEN_WIDTH - BUTTON_SIZE - PADDING),
       );
       y.value = Math.max(
         PADDING,
-        Math.min(newY, SCREEN_HEIGHT - BUTTON_SIZE),
+        Math.min(newY, SCREEN_HEIGHT - BUTTON_SIZE - PADDING),
       );
     },
     onEnd: () => {
@@ -148,8 +147,8 @@ const DraggableFab = ({ onPress, onDragEnd, initialX, initialY }) => {
       const toLeft = x.value < SCREEN_WIDTH / 2;
       const toTop = y.value < SCREEN_HEIGHT / 2;
 
-      const finalX = toLeft ? PADDING : SCREEN_WIDTH - BUTTON_SIZE;
-      const finalY = toTop ? PADDING : SCREEN_HEIGHT - BUTTON_SIZE;
+      const finalX = toLeft ? PADDING : SCREEN_WIDTH - BUTTON_SIZE - PADDING;
+      const finalY = toTop ? PADDING : SCREEN_HEIGHT - BUTTON_SIZE - PADDING;
 
       x.value = withTiming(finalX, { duration: 400 });
       y.value = withTiming(finalY, { duration: 400 }, () => {
@@ -206,18 +205,16 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
   const [visible, setVisible] = useState(false);
   const [btmSheetVisible, setbtmSheetVisible] = useState(false);
   const [error, setError] = useState(false);
-  const timerRef = useRef(null);
-
-  const toggleBottomNavigationView = () => {
-    setbtmSheetVisible(!btmSheetVisible);
-  };
-
   const [isTouch, setTouch] = useState(false);
   const [widgetVisible, setWidgetVisible] = useState(true);
   const withAnim = useRef(new RNAnimated.Value(40)).current;
   const [lastTouch, setLastTouch] = useState([-1, -1]);
   const issueTitleRef = useRef(null);
   const [fabPos, setFabPos] = useState(START_POS);
+
+  const toggleBottomNavigationView = () => {
+    setbtmSheetVisible(!btmSheetVisible);
+  };
 
   const onChangeSelectedColor = color => () => {
     setExpanded(false);
@@ -243,7 +240,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
 
       const uri = await captureScreen({
         handleGLSurfaceViewOnAndroid: true,
-        quality: 1,
+        quality: 0,
       });
 
       if (uri) {
@@ -254,7 +251,8 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
       }
     } catch (e) {
       setWidgetVisible(true);
-      const message = e.message || 'Something went wrong while taking the screenshot.';
+      const message =
+        e.message || 'Something went wrong while taking the screenshot.';
       Toast.show({
         type: 'error',
         text1: 'Capture error',
@@ -403,6 +401,11 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
     [comment],
   );
 
+  const buttonText = useMemo(
+    () => (loading ? 'Submitting...' : 'Submit'),
+    [loading],
+  );
+
   return (
     <View style={{ zIndex: 999 }}>
       <Fragment>
@@ -465,7 +468,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
             </View>
             <ScrollView
               ref={viewRef}
-              contentContainerStyle={{ alignItems: 'center' }}
+              contentContainerStyle={{ alignItems: 'center', flex: 1 }}
               style={styles.modalContainer}>
               <View
                 style={styles.svgContainer}
@@ -558,11 +561,8 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
                       styles.bottomSheetButtonContainer,
                       { backgroundColor: buttonColor },
                     ]}>
-                    {loading ? (
-                      <ActivityIndicator color="#fff" />
-                    ) : (
-                      <Text style={styles.submitButtonText}>Submit</Text>
-                    )}
+                    <Text style={styles.submitButtonText}>{buttonText}</Text>
+                    {loading && <ActivityIndicator color="#fff" />}
                   </TouchableOpacity>
                 </View>
               </BottomSheet>
@@ -655,8 +655,10 @@ const styles = StyleSheet.create({
   },
   svgContainer: {
     flex: 1,
-    height,
-    width,
+    alignItems: 'center',
+    // justifyContent: 'center',
+    // height,
+    // width,
   },
   textInput: {
     flex: 1,
@@ -706,6 +708,7 @@ const styles = StyleSheet.create({
     lineHeight: 19.5,
     fontWeight: '500',
     overflow: 'hidden',
+    textAlign: "justify",
   },
   rightIconContainer: {
     height: 40,
@@ -757,10 +760,12 @@ const styles = StyleSheet.create({
   bottomSheetButtonContainer: {
     width: '100%',
     borderRadius: 8,
-    alignItems: 'center',
-    padding: 15,
     height: 48,
     marginTop: 13,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    columnGap: 8,
   },
   submitButtonText: {
     color: '#FFFFFF',

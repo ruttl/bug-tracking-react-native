@@ -1,6 +1,6 @@
 {
   "name": "@ruttl/bug-tracking",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "description": "React Native plugin for bug tracking via Ruttl",
   "main": "lib/commonjs/index.js",
   "module": "lib/module/index.js",
@@ -13,11 +13,15 @@
   ],
   "scripts": {
     "build": "npm run clean && bob build",
+    "bob": "npx bob init",
     "clean": "rimraf lib",
     "postinstall": "npm run build",
     "prepack": "bob build"
   },
-  "keywords": ["ruttl","bug trakcing"],
+  "keywords": [
+    "ruttl",
+    "bug trakcing"
+  ],
   "repository": "https://github.com/ruttl/bug-tracking-react-native.git",
   "bugs": "https://github.com/ruttl/bug-tracking-react-native/issues",
   "homepage": "https://ruttl.com/mobile-app-feedback/",
@@ -66,5 +70,9 @@
     "react-native-draggable": "^3.3.0",
     "react-native-material-ripple": "^0.9.1",
     "react-native-toast-message": "^2.1.6"
-  }
+  },
+  "eslintIgnore": [
+    "node_modules/",
+    "lib/"
+  ]
 }
