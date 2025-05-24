@@ -237,7 +237,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
 
       const uri = await captureScreen({
         handleGLSurfaceViewOnAndroid: true,
-        quality: 0.7,
+        quality: 1,
       });
 
       if (uri) {
@@ -275,7 +275,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
         return;
       }
 
-      const uri = await captureRef(viewRef, { result: 'data-uri', quality: 0.7, height: SCREEN_HEIGHT, width: SCREEN_WIDTH });
+      const uri = await captureRef(viewRef, { result: 'data-uri', quality: 1, height: SCREEN_HEIGHT, width: SCREEN_WIDTH });
 
       const apiClient = axios.create({
         // baseURL: `https://us-central1-ruttlp.cloudfunctions.net/mobile/projects/${projectID}`,
