@@ -32,23 +32,20 @@ import Animated, {
   runOnJS,
 } from 'react-native-reanimated';
 
-const Constants = {
-  zIndex: 999999999,
-  aspectRatio: Dimensions.get('window').width / Dimensions.get('window').height,
-};
-const height = Dimensions.get('window').height * 0.72;
-const width = height * Constants.aspectRatio;
-const Colors = ['#160647', '#FF4F6D', '#FCFF52'];
-const InitialColor = Colors[1];
-
+const PADDING = 24;
 const BUTTON_SIZE = 72;
+const Z_INDEX = 999999999;
+const COLORS = ['#160647', '#FF4F6D', '#FCFF52'];
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const SCREEN_HEIGHT = Dimensions.get('window').height;
-const PADDING = 24;
+const ASPECT_RATIO = SCREEN_WIDTH / SCREEN_HEIGHT;
 const START_POS = {
   x: SCREEN_WIDTH - BUTTON_SIZE - PADDING,
   y: SCREEN_HEIGHT - BUTTON_SIZE - PADDING,
 };
+
+const height = Dimensions.get('window').height * 0.72;
+const width = height * ASPECT_RATIO;
 
 export const CommentInput = ({
   comment,
@@ -168,7 +165,7 @@ const DraggableFab = ({ onPress, onDragEnd, initialX, initialY }) => {
           {
             position: 'absolute',
             pointerEvents: 'box-none',
-            zIndex: Constants.zIndex,
+            zIndex: Z_INDEX,
           },
           fabStyle,
         ]}>
@@ -200,7 +197,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
   const [expanded, setExpanded] = useState(false);
   const [loading, setLoading] = useState(false);
   const [paths, setPaths] = useState([]);
-  const [selectedColor, setSelectedColor] = useState(InitialColor);
+  const [selectedColor, setSelectedColor] = useState(COLORS[1]);
   const [src, setSrc] = useState('');
   const [visible, setVisible] = useState(false);
   const [btmSheetVisible, setbtmSheetVisible] = useState(false);
@@ -240,7 +237,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
 
       const uri = await captureScreen({
         handleGLSurfaceViewOnAndroid: true,
-        quality: 0,
+        quality: 0.7,
       });
 
       if (uri) {
@@ -278,7 +275,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
         return;
       }
 
-      const uri = await captureRef(viewRef, { result: 'data-uri' });
+      const uri = await captureRef(viewRef, { result: 'data-uri', quality: 0.7, height: SCREEN_HEIGHT, width: SCREEN_WIDTH });
 
       const apiClient = axios.create({
         // baseURL: `https://us-central1-ruttlp.cloudfunctions.net/mobile/projects/${projectID}`,
@@ -291,9 +288,9 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
         description: btmSheetVisible ? description : null,
         // appVersion: '1.0.0',
         // device: 'iPhone',
-        height: Dimensions.get('window').height,
+        height: SCREEN_HEIGHT,
         osName: Platform.OS,
-        width: Dimensions.get('window').width,
+        width: SCREEN_WIDTH,
       };
 
       const {
@@ -452,7 +449,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
                     { backgroundColor: selectedColor, borderColor: '#fff' },
                   ]}
                 />
-                {Colors.filter(c => c !== selectedColor).map((c, i) => (
+                {COLORS.filter(c => c !== selectedColor).map((c, i) => (
                   <Ripple
                     key={i}
                     onPress={onChangeSelectedColor(c)}
@@ -467,11 +464,11 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
               </RNAnimated.View>
             </View>
             <ScrollView
-              ref={viewRef}
-              contentContainerStyle={{ alignItems: 'center', flex: 1 }}
+              contentContainerStyle={{ alignItems: 'center' }}
               style={styles.modalContainer}>
               <View
-                style={styles.svgContainer}
+                ref={viewRef}
+                style={[styles.svgContainer]}
                 onTouchStart={onTouchStart}
                 onTouchMove={onTouchMove}
                 onTouchEnd={onTouchEnd}>
@@ -591,7 +588,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
-    zIndex: Constants.zIndex,
+    zIndex: Z_INDEX,
   },
   errorText: {
     color: 'red',
@@ -603,7 +600,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     height: 60,
     width: 60,
-    // backgroundColor: Colors[0],
+    // backgroundColor: COLORS[0],
     backgroundColor: 'white',
     borderRadius: 60 / 2,
     zIndex: 1,
@@ -655,10 +652,10 @@ const styles = StyleSheet.create({
   },
   svgContainer: {
     flex: 1,
-    alignItems: 'center',
-    // justifyContent: 'center',
-    // height,
-    // width,
+    // alignItems: 'center',
+    height: height,
+    width: width,
+    alignSelf: 'center',
   },
   textInput: {
     flex: 1,
@@ -708,7 +705,7 @@ const styles = StyleSheet.create({
     lineHeight: 19.5,
     fontWeight: '500',
     overflow: 'hidden',
-    textAlign: "justify",
+    textAlign: 'justify',
   },
   rightIconContainer: {
     height: 40,
