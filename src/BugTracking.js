@@ -16,6 +16,8 @@ import {
   View,
   ActivityIndicator,
   TouchableOpacity,
+  StatusBar,
+  useColorScheme,
 } from 'react-native';
 import axios from 'axios';
 import {captureRef, captureScreen} from 'react-native-view-shot';
@@ -49,36 +51,27 @@ const width = height * ASPECT_RATIO;
 
 export const CommentInput = ({
   comment,
-  setComment,
   toggleBottomNavigationView,
   loading,
   onSubmit,
+  handleCommentChange,
+  error,
+  theme,
 }) => {
-  const [error, setError] = React.useState(false);
-
-  const handleSubmit = () => {
-    if (!comment.trim()) {
-      setError(true);
-      return;
-    }
-    onSubmit?.();
-  };
-
-  const handleChange = text => {
-    setComment(text);
-    if (error && text.trim()) setError(false);
-  };
-
   return (
     <View style={styles.commentContainer}>
       <View style={styles.row}>
-        <View style={[styles.inputWrapper]}>
+        <View
+          style={[
+            styles.inputWrapper,
+            {backgroundColor: theme?.background || '#000'},
+          ]}>
           <TextInput
             placeholder={'Report the issue'}
-            placeholderTextColor={'#FFFFFF'}
-            onChangeText={handleChange}
+            placeholderTextColor={theme?.text || '#000'}
+            onChangeText={handleCommentChange}
             value={comment}
-            style={styles.singleTextInput}
+            style={[styles.singleTextInput, {color: theme?.text || '#000'}]}
           />
           <TouchableOpacity onPress={toggleBottomNavigationView}>
             <Image
@@ -92,10 +85,11 @@ export const CommentInput = ({
         <View style={{width: 8}} />
 
         <TouchableOpacity
-          onPress={handleSubmit}
-          style={styles.rightIconContainer}>
+          onPress={onSubmit}
+          style={styles.rightIconContainer}
+          disabled={loading}>
           {loading ? (
-            <ActivityIndicator color="#FFFFFF" style={{paddingHorizontal: 4}} />
+            <ActivityIndicator color="#FFF" style={{paddingHorizontal: 4}} />
           ) : (
             <Text style={styles.addButtonStyle}>Add</Text>
           )}
@@ -372,7 +366,7 @@ export const BugTracking = ({projectID = '', token = ''}) => {
 
   const handleCommentChange = text => {
     setComment(text);
-    if (error && text.trim()) {
+    if (error && text?.trim()) {
       setError(false);
     }
   };
@@ -405,8 +399,18 @@ export const BugTracking = ({projectID = '', token = ''}) => {
     [loading],
   );
 
+  const scheme = useColorScheme();
+
+  const theme = useMemo(() => {
+    return {
+      background: scheme === 'dark' ? '#2A2A2A' : '#FFFFFF',
+      text: scheme === 'dark' ? '#FFFFFF' : '#000000',
+    };
+  }, [scheme]);
+
   return (
     <View style={{zIndex: 999}}>
+      {!widgetVisible && <StatusBar backgroundColor={'#000'}></StatusBar>}
       <Fragment>
         {widgetVisible && (
           <DraggableFab
@@ -435,17 +439,18 @@ export const BugTracking = ({projectID = '', token = ''}) => {
                   style={[
                     {
                       marginRight: 'auto',
+                      width: 80,
                       borderRadius: 27,
-                      backgroundColor: '#2A2A2A',
+                      backgroundColor: theme?.background,
                       height: 34,
                       justifyContent: 'center',
+                      alignItems: 'center',
                     },
                   ]}>
                   <Text
                     style={{
-                      color: 'white',
+                      color: theme?.text,
                       marginHorizontal: 12,
-                      fontFamily: 'Inter',
                       fontWeight: '600',
                       fontSize: 16,
                       lineHeight: 16, // 100% of 16px
@@ -507,7 +512,9 @@ export const BugTracking = ({projectID = '', token = ''}) => {
                   alignItems: 'center',
                   flexGrow: 1,
                   justifyContent: 'center',
+                  overflow: 'hidden',
                 }}
+                scrollEnabled={false}
                 style={{flex: 1, backgroundColor: '#1F1F1F'}}>
                 <View
                   ref={viewRef}
@@ -587,10 +594,12 @@ export const BugTracking = ({projectID = '', token = ''}) => {
               style={styles.footerContainer}>
               <CommentInput
                 comment={comment}
-                setComment={setComment}
                 toggleBottomNavigationView={toggleBottomNavigationView}
                 loading={loading}
+                handleCommentChange={handleCommentChange}
                 onSubmit={onSubmit}
+                error={error}
+                theme={theme}
               />
               <BottomSheet
                 visible={btmSheetVisible}
@@ -633,6 +642,7 @@ export const BugTracking = ({projectID = '', token = ''}) => {
                   />
                   <TouchableOpacity
                     onPress={onSubmit}
+                    disabled={loading}
                     style={[
                       styles.bottomSheetButtonContainer,
                       {backgroundColor: buttonColor},
@@ -790,7 +800,6 @@ const styles = StyleSheet.create({
   singleTextInput: {
     flex: 1,
     color: '#E7E7E7',
-    backgroundColor: '#2C2C2C',
     fontSize: 15,
     fontFamily: 'Inter-Medium',
     lineHeight: 19.5,
@@ -877,7 +886,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#000',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 20,
+    paddingVertical: 10,
   },
   row: {
     flexDirection: 'row',
