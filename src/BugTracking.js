@@ -1,5 +1,5 @@
-import React, { Fragment, useEffect, useMemo, useRef, useState } from 'react';
-import { BottomSheet } from 'react-native-btr';
+import React, {Fragment, useEffect, useMemo, useRef, useState} from 'react';
+import {BottomSheet} from 'react-native-btr';
 import {
   Animated as RNAnimated,
   Dimensions,
@@ -18,12 +18,12 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import axios from 'axios';
-import { captureRef, captureScreen } from 'react-native-view-shot';
+import {captureRef, captureScreen} from 'react-native-view-shot';
 import Ripple from 'react-native-material-ripple';
-import { Path, Svg } from 'react-native-svg';
+import {Path, Svg} from 'react-native-svg';
 import PropTypes from 'prop-types';
-import Toast, { BaseToast } from 'react-native-toast-message';
-import { PanGestureHandler } from 'react-native-gesture-handler';
+import Toast, {BaseToast} from 'react-native-toast-message';
+import {PanGestureHandler} from 'react-native-gesture-handler';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -72,10 +72,10 @@ export const CommentInput = ({
   return (
     <View style={styles.commentContainer}>
       <View style={styles.row}>
-        <View style={[styles.inputWrapper, error && { borderColor: 'red' }]}>
+        <View style={[styles.inputWrapper]}>
           <TextInput
             placeholder={'Report the issue'}
-            placeholderTextColor={error ? 'red' : '#16064780'}
+            placeholderTextColor={'#FFFFFF'}
             onChangeText={handleChange}
             value={comment}
             style={styles.singleTextInput}
@@ -89,24 +89,20 @@ export const CommentInput = ({
           </TouchableOpacity>
         </View>
 
-        <View style={{ width: 4 }} />
+        <View style={{width: 8}} />
 
-        {loading ? (
-          <ActivityIndicator color="#6552ff" style={{ paddingHorizontal: 4 }} />
-        ) : (
-          <TouchableOpacity
-            onPress={handleSubmit}
-            style={styles.rightIconContainer}>
-            <Image
-              source={require('./assets/arrow-right.png')}
-              style={styles.rightIcon}
-              resizeMode="cover"
-            />
-          </TouchableOpacity>
-        )}
+        <TouchableOpacity
+          onPress={handleSubmit}
+          style={styles.rightIconContainer}>
+          {loading ? (
+            <ActivityIndicator color="#FFFFFF" style={{paddingHorizontal: 4}} />
+          ) : (
+            <Text style={styles.addButtonStyle}>Add</Text>
+          )}
+        </TouchableOpacity>
       </View>
       {error && (
-        <Text style={styles.errorText}>
+        <Text style={[styles.errorText, {marginLeft: 12}]}>
           Please enter a comment before submitting
         </Text>
       )}
@@ -114,7 +110,7 @@ export const CommentInput = ({
   );
 };
 
-const DraggableFab = ({ onPress, onDragEnd, initialX, initialY }) => {
+const DraggableFab = ({onPress, onDragEnd, initialX, initialY}) => {
   const startX = initialX;
   const startY = initialY;
 
@@ -147,15 +143,15 @@ const DraggableFab = ({ onPress, onDragEnd, initialX, initialY }) => {
       const finalX = toLeft ? PADDING : SCREEN_WIDTH - BUTTON_SIZE - PADDING;
       const finalY = toTop ? PADDING : SCREEN_HEIGHT - BUTTON_SIZE - PADDING;
 
-      x.value = withTiming(finalX, { duration: 400 });
-      y.value = withTiming(finalY, { duration: 400 }, () => {
-        if (onDragEnd) runOnJS(onDragEnd)({ x: finalX, y: finalY });
+      x.value = withTiming(finalX, {duration: 400});
+      y.value = withTiming(finalY, {duration: 400}, () => {
+        if (onDragEnd) runOnJS(onDragEnd)({x: finalX, y: finalY});
       });
     },
   });
 
   const fabStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: x.value }, { translateY: y.value }],
+    transform: [{translateX: x.value}, {translateY: y.value}],
   }));
 
   return (
@@ -175,7 +171,7 @@ const DraggableFab = ({ onPress, onDragEnd, initialX, initialY }) => {
           style={styles.buttonContainer}>
           <Image
             source={require('./assets/ruttl.png')}
-            style={{ width: 24, height: 24 }}
+            style={{width: 24, height: 24}}
           />
         </TouchableOpacity>
       </Animated.View>
@@ -183,7 +179,7 @@ const DraggableFab = ({ onPress, onDragEnd, initialX, initialY }) => {
   );
 };
 
-export const BugTracking = ({ projectID = '', token = '' }) => {
+export const BugTracking = ({projectID = '', token = ''}) => {
   if (!projectID || !token) {
     throw new Error(
       `Error: Unable to find required prop 'projectID' or 'token' or both.`,
@@ -191,6 +187,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
   }
 
   const viewRef = useRef();
+  const exportRef = useRef();
   const [comment, setComment] = useState('');
   const [description, setDescription] = useState('');
   const [currentPath, setCurrentPath] = useState([]);
@@ -266,7 +263,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
       }
 
       setLoading(true);
-      if (!viewRef.current) {
+      if (!exportRef.current) {
         Toast.show({
           type: 'error',
           text1: 'Capture error',
@@ -275,12 +272,17 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
         return;
       }
 
-      const uri = await captureRef(viewRef, { result: 'data-uri', quality: 1, height: SCREEN_HEIGHT, width: SCREEN_WIDTH });
+      const uri = await captureRef(exportRef, {
+        result: 'data-uri',
+        quality: 1,
+        height: SCREEN_HEIGHT,
+        width: SCREEN_WIDTH,
+      });
 
       const apiClient = axios.create({
         // baseURL: `https://us-central1-ruttlp.cloudfunctions.net/mobile/projects/${projectID}`,
         baseURL: `https://us-central1-rally-brucira.cloudfunctions.net/mobile/projects/${projectID}`,
-        headers: { 'x-plugin-code': token },
+        headers: {'x-plugin-code': token},
       });
 
       const saveData = {
@@ -294,11 +296,11 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
       };
 
       const {
-        data: { id: ticketID },
+        data: {id: ticketID},
       } = await apiClient.post('/tickets', saveData);
 
       await apiClient
-        .post(`/tickets/${ticketID}/screenshot`, { image: uri })
+        .post(`/tickets/${ticketID}/screenshot`, {image: uri})
         .then(() =>
           Toast.show({
             position: 'top',
@@ -332,7 +334,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
   const onTouchMove = event => {
     if (isTouch) {
       const newPath = [...currentPath];
-      const { locationX, locationY } = event.nativeEvent;
+      const {locationX, locationY} = event.nativeEvent;
       const newPoint = `${newPath.length === 0 ? 'M' : ''}${locationX.toFixed(
         0,
       )},${locationY.toFixed(0)} `;
@@ -359,7 +361,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
   const onTouchEnd = () => {
     const currentPaths = [...paths];
     const newPath = [...currentPath];
-    currentPaths.push({ color: selectedColor, data: newPath });
+    currentPaths.push({color: selectedColor, data: newPath});
     setPaths(currentPaths);
     setCurrentPath([]);
   };
@@ -404,7 +406,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
   );
 
   return (
-    <View style={{ zIndex: 999 }}>
+    <View style={{zIndex: 999}}>
       <Fragment>
         {widgetVisible && (
           <DraggableFab
@@ -415,94 +417,171 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
           />
         )}
 
-        <Modal animationType="slide" transparent visible={visible}>
+        <Modal animationType="slide" visible={visible} transparent={false}>
           <SafeAreaView style={styles.modalContainer}>
-            <View style={styles.appbarContainer}>
-              <Ripple
-                onPress={onReset}
-                rippleCentered
-                rippleColor="rgb(255, 251, 254)"
-                style={[styles.iconButton, { marginRight: 'auto' }]}>
-                <Image
-                  source={require('./assets/close.png')}
-                  style={{ height: 24, width: 24 }}
-                />
-              </Ripple>
-              <Ripple
-                onPress={onUndo}
-                rippleCentered
-                rippleColor="rgb(255, 251, 254)"
-                style={styles.iconButton}>
-                <Image
-                  source={require('./assets/undo.png')}
-                  style={{ height: 24, width: 24 }}
-                />
-              </Ripple>
-              <RNAnimated.View
-                style={[styles.colorsContainer, { width: withAnim }]}>
+            <View
+              style={{
+                flex: 1,
+                borderRadius: 28,
+                overflow: 'hidden',
+                padding: 16,
+                backgroundColor: '#1F1F1F',
+              }}>
+              <View style={styles.appbarContainer}>
                 <Ripple
-                  onPress={toggleOpen}
+                  onPress={onReset}
                   rippleCentered
-                  rippleOpacity={0.12}
+                  rippleColor="rgb(255, 251, 254)"
                   style={[
-                    styles.colorButton,
-                    { backgroundColor: selectedColor, borderColor: '#fff' },
-                  ]}
-                />
-                {COLORS.filter(c => c !== selectedColor).map((c, i) => (
+                    {
+                      marginRight: 'auto',
+                      borderRadius: 27,
+                      backgroundColor: '#2A2A2A',
+                      height: 34,
+                      justifyContent: 'center',
+                    },
+                  ]}>
+                  <Text
+                    style={{
+                      color: 'white',
+                      marginHorizontal: 12,
+                      fontFamily: 'Inter',
+                      fontWeight: '600',
+                      fontSize: 16,
+                      lineHeight: 16, // 100% of 16px
+                      letterSpacing: -0.32, // -2% of 16px = -0.32
+                    }}>
+                    Close
+                  </Text>
+                </Ripple>
+                <Ripple
+                  onPress={onUndo}
+                  rippleCentered
+                  rippleColor="rgb(255, 251, 254)"
+                  style={styles.iconButton}>
+                  <Image
+                    source={require('./assets/undo.png')}
+                    style={{
+                      height: 24,
+                      width: 24,
+                      transform: [{rotate: '180deg'}],
+                    }}
+                  />
+                </Ripple>
+                <RNAnimated.View
+                  style={[styles.colorsContainer, {width: withAnim}]}>
                   <Ripple
-                    key={i}
-                    onPress={onChangeSelectedColor(c)}
+                    onPress={toggleOpen}
                     rippleCentered
                     rippleOpacity={0.12}
                     style={[
                       styles.colorButton,
-                      { backgroundColor: c, borderColor: c },
-                    ]}
-                  />
-                ))}
-              </RNAnimated.View>
-            </View>
-            <ScrollView
-              contentContainerStyle={{ alignItems: 'center' }}
-              style={styles.modalContainer}>
-              <View
-                ref={viewRef}
-                style={[styles.svgContainer]}
-                onTouchStart={onTouchStart}
-                onTouchMove={onTouchMove}
-                onTouchEnd={onTouchEnd}>
-                {src && (
-                  <ImageBackground
-                    ref={viewRef}
-                    resizeMode="contain"
-                    source={{ uri: src }}>
-                    <Svg height={height} width={width}>
-                      <Path
-                        d={currentPath.join('')}
-                        stroke={selectedColor}
-                        fill={'transparent'}
-                        strokeWidth={4}
-                        strokeLinejoin={'round'}
-                        strokeLinecap={'round'}
-                      />
-                      {paths.length > 0 &&
-                        paths.map(({ color, data }, index) => (
-                          <Path
-                            key={`path-${index}`}
-                            d={data.join('')}
-                            stroke={color}
-                            fill={'transparent'}
-                            strokeWidth={4}
-                            strokeLinejoin={'round'}
-                            strokeLinecap={'round'}
-                          />
-                        ))}
-                    </Svg>
-                  </ImageBackground>
-                )}
+                      {
+                        backgroundColor: selectedColor,
+                        borderColor: '#fff',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      },
+                    ]}>
+                    <Image
+                      source={require('./assets/edit_color.png')}
+                      style={{height: 14, width: 14}}
+                    />
+                  </Ripple>
+                  {COLORS.filter(c => c !== selectedColor).map((c, i) => (
+                    <Ripple
+                      key={i}
+                      onPress={onChangeSelectedColor(c)}
+                      rippleCentered
+                      rippleOpacity={0.12}
+                      style={[
+                        styles.colorButton,
+                        {backgroundColor: c, borderColor: c, marginLeft: 8},
+                      ]}
+                    />
+                  ))}
+                </RNAnimated.View>
               </View>
-            </ScrollView>
+              <ScrollView
+                contentContainerStyle={{
+                  alignItems: 'center',
+                  flexGrow: 1,
+                  justifyContent: 'center',
+                }}
+                style={{flex: 1, backgroundColor: '#1F1F1F'}}>
+                <View
+                  ref={viewRef}
+                  style={[styles.svgContainer]}
+                  onTouchStart={onTouchStart}
+                  onTouchMove={onTouchMove}
+                  onTouchEnd={onTouchEnd}>
+                  {src && (
+                    <ImageBackground
+                      ref={viewRef}
+                      resizeMode="contain"
+                      source={{uri: src}}>
+                      <Svg height={height} width={width}>
+                        <Path
+                          d={currentPath.join('')}
+                          stroke={selectedColor}
+                          fill={'transparent'}
+                          strokeWidth={4}
+                          strokeLinejoin={'round'}
+                          strokeLinecap={'round'}
+                        />
+                        {paths.length > 0 &&
+                          paths.map(({color, data}, index) => (
+                            <Path
+                              key={`path-${index}`}
+                              d={data.join('')}
+                              stroke={color}
+                              fill={'transparent'}
+                              strokeWidth={4}
+                              strokeLinejoin={'round'}
+                              strokeLinecap={'round'}
+                            />
+                          ))}
+                      </Svg>
+                    </ImageBackground>
+                  )}
+                </View>
+
+                <View
+                  ref={exportRef}
+                  style={styles.svgContainerHidden}
+                  pointerEvents="none">
+                  {src && (
+                    <ImageBackground
+                      ref={viewRef}
+                      resizeMode="contain"
+                      source={{uri: src}}>
+                      <Svg height={height} width={width}>
+                        <Path
+                          d={currentPath.join('')}
+                          stroke={selectedColor}
+                          fill={'transparent'}
+                          strokeWidth={4}
+                          strokeLinejoin={'round'}
+                          strokeLinecap={'round'}
+                        />
+                        {paths.length > 0 &&
+                          paths.map(({color, data}, index) => (
+                            <Path
+                              key={`path-${index}`}
+                              d={data.join('')}
+                              stroke={color}
+                              fill={'transparent'}
+                              strokeWidth={4}
+                              strokeLinejoin={'round'}
+                              strokeLinecap={'round'}
+                            />
+                          ))}
+                      </Svg>
+                    </ImageBackground>
+                  )}
+                </View>
+              </ScrollView>
+            </View>
             <KeyboardAvoidingView
               behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
               style={styles.footerContainer}>
@@ -524,7 +603,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
                     ref={issueTitleRef}
                     style={[
                       styles.bottomSheetTextInput,
-                      error && { borderColor: 'red' },
+                      error && {borderColor: 'red'},
                     ]}
                     keyboardType="name-phone-pad"
                     placeholder="Add issue title"
@@ -533,7 +612,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
                     onChangeText={handleCommentChange}
                   />
                   {error && (
-                    <View style={{ width: '100%' }}>
+                    <View style={{width: '100%'}}>
                       <Text style={[styles.errorText]}>
                         Please enter a comment before submitting
                       </Text>
@@ -542,7 +621,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
                   <TextInput
                     style={[
                       styles.bottomSheetTextInput,
-                      { height: 164, marginTop: 13 },
+                      {height: 164, marginTop: 13},
                     ]}
                     keyboardType="name-phone-pad"
                     placeholder="Add issue description (optional)"
@@ -556,7 +635,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
                     onPress={onSubmit}
                     style={[
                       styles.bottomSheetButtonContainer,
-                      { backgroundColor: buttonColor },
+                      {backgroundColor: buttonColor},
                     ]}>
                     <Text style={styles.submitButtonText}>{buttonText}</Text>
                     {loading && <ActivityIndicator color="#fff" />}
@@ -571,7 +650,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
             info: props => (
               <BaseToast
                 {...props}
-                style={{ backgroundColor: '#6552ff', borderLeftWidth: 0 }}
+                style={{backgroundColor: '#6552ff', borderLeftWidth: 0}}
                 text1Style={{
                   color: 'white',
                   fontWeight: '400',
@@ -594,6 +673,8 @@ const styles = StyleSheet.create({
     color: 'red',
     fontSize: 12,
     marginTop: 4,
+    textAlign: 'left',
+    width: '100%',
   },
   buttonContainer: {
     justifyContent: 'center',
@@ -618,13 +699,16 @@ const styles = StyleSheet.create({
     backgroundColor: 'black',
   },
   appbarContainer: {
-    height: 64,
+    height: 34,
     width: '100%',
+    overflow: 'hidden',
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 4,
-    backgroundColor: 'black',
+    marginBottom: 16,
+    // borderWidth:1,
+    // borderColor: '#E7E7E7',
   },
   iconButton: {
     position: 'relative',
@@ -638,24 +722,33 @@ const styles = StyleSheet.create({
     borderRadius: 40 / 2,
   },
   colorsContainer: {
+    // flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    marginRight: 12,
     overflow: 'hidden',
   },
   colorButton: {
-    height: 24,
-    width: 24,
-    margin: 6,
-    borderRadius: 24 / 2,
+    height: 34,
+    width: 34,
+    borderRadius: 34 / 2,
     borderWidth: 1,
   },
   svgContainer: {
-    flex: 1,
-    // alignItems: 'center',
+    alignItems: 'center',
     height: height,
     width: width,
     alignSelf: 'center',
+    overflow: 'hidden',
+    borderRadius: 16,
+  },
+  svgContainerHidden: {
+    width,
+    height,
+    position: 'absolute',
+    top: -9999,
+    opacity: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   textInput: {
     flex: 1,
@@ -683,37 +776,42 @@ const styles = StyleSheet.create({
     flexDirection: 'column',
     paddingHorizontal: 14,
     paddingVertical: 10,
-    backgroundColor: '#ECECEC',
+    backgroundColor: '#000',
   },
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#E7E7E7',
-    borderRadius: 10,
-    backgroundColor: '#FFF',
+    borderRadius: 24,
+    backgroundColor: '#2C2C2C',
     paddingHorizontal: 10,
     height: 45,
     flex: 1,
   },
   singleTextInput: {
     flex: 1,
-    color: '#160647',
-    backgroundColor: '#FFFFFF',
+    color: '#E7E7E7',
+    backgroundColor: '#2C2C2C',
     fontSize: 15,
     fontFamily: 'Inter-Medium',
     lineHeight: 19.5,
     fontWeight: '500',
     overflow: 'hidden',
     textAlign: 'justify',
+    borderRadius: 24,
   },
   rightIconContainer: {
     height: 40,
-    width: 40,
+    width: 80,
+    borderRadius: 27,
     backgroundColor: '#6552ff',
-    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  addButtonStyle: {
+    color: '#FFF',
+    fontSize: 16,
+    fontWeight: '600',
+    letterSpacing: -0.32,
   },
   rightIcon: {
     height: 24,
@@ -723,6 +821,7 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     marginLeft: 8,
+    backgroundColor: 'transparent',
   },
   bottomSheetContainer: {
     paddingHorizontal: 16,
@@ -775,6 +874,10 @@ const styles = StyleSheet.create({
   },
   commentContainer: {
     width: '100%',
+    backgroundColor: '#000',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 20,
   },
   row: {
     flexDirection: 'row',
