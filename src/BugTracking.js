@@ -1,5 +1,5 @@
-import React, {Fragment, useEffect, useMemo, useRef, useState} from 'react';
-import {BottomSheet} from 'react-native-btr';
+import React, { Fragment, useEffect, useMemo, useRef, useState } from 'react';
+import { BottomSheet } from 'react-native-btr';
 import {
   Animated as RNAnimated,
   Dimensions,
@@ -20,12 +20,12 @@ import {
   useColorScheme,
 } from 'react-native';
 import axios from 'axios';
-import {captureRef, captureScreen} from 'react-native-view-shot';
+import { captureRef, captureScreen } from 'react-native-view-shot';
 import Ripple from 'react-native-material-ripple';
-import {Path, Svg} from 'react-native-svg';
+import { Path, Svg } from 'react-native-svg';
 import PropTypes from 'prop-types';
-import Toast, {BaseToast} from 'react-native-toast-message';
-import {PanGestureHandler} from 'react-native-gesture-handler';
+import Toast, { BaseToast } from 'react-native-toast-message';
+import { PanGestureHandler } from 'react-native-gesture-handler';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -64,14 +64,14 @@ export const CommentInput = ({
         <View
           style={[
             styles.inputWrapper,
-            {backgroundColor: theme?.background || '#000'},
+            { backgroundColor: theme?.background || '#000' },
           ]}>
           <TextInput
             placeholder={'Report the issue'}
-            placeholderTextColor={theme?.text || '#000'}
+            placeholderTextColor={theme?.placeholder || '#000'}
             onChangeText={handleCommentChange}
             value={comment}
-            style={[styles.singleTextInput, {color: theme?.text || '#000'}]}
+            style={[styles.singleTextInput, { color: theme?.text || '#000' }]}
           />
           <TouchableOpacity onPress={toggleBottomNavigationView}>
             <Image
@@ -82,21 +82,21 @@ export const CommentInput = ({
           </TouchableOpacity>
         </View>
 
-        <View style={{width: 8}} />
+        <View style={{ width: 8 }} />
 
         <TouchableOpacity
           onPress={onSubmit}
           style={styles.rightIconContainer}
           disabled={loading}>
           {loading ? (
-            <ActivityIndicator color="#FFF" style={{paddingHorizontal: 4}} />
+            <ActivityIndicator color="#FFF" style={{ paddingHorizontal: 4 }} />
           ) : (
             <Text style={styles.addButtonStyle}>Add</Text>
           )}
         </TouchableOpacity>
       </View>
       {error && (
-        <Text style={[styles.errorText, {marginLeft: 12}]}>
+        <Text style={[styles.errorText, { marginLeft: 12 }]}>
           Please enter a comment before submitting
         </Text>
       )}
@@ -104,7 +104,7 @@ export const CommentInput = ({
   );
 };
 
-const DraggableFab = ({onPress, onDragEnd, initialX, initialY}) => {
+const DraggableFab = ({ onPress, onDragEnd, initialX, initialY }) => {
   const startX = initialX;
   const startY = initialY;
 
@@ -137,15 +137,15 @@ const DraggableFab = ({onPress, onDragEnd, initialX, initialY}) => {
       const finalX = toLeft ? PADDING : SCREEN_WIDTH - BUTTON_SIZE - PADDING;
       const finalY = toTop ? PADDING : SCREEN_HEIGHT - BUTTON_SIZE - PADDING;
 
-      x.value = withTiming(finalX, {duration: 400});
-      y.value = withTiming(finalY, {duration: 400}, () => {
-        if (onDragEnd) runOnJS(onDragEnd)({x: finalX, y: finalY});
+      x.value = withTiming(finalX, { duration: 400 });
+      y.value = withTiming(finalY, { duration: 400 }, () => {
+        if (onDragEnd) runOnJS(onDragEnd)({ x: finalX, y: finalY });
       });
     },
   });
 
   const fabStyle = useAnimatedStyle(() => ({
-    transform: [{translateX: x.value}, {translateY: y.value}],
+    transform: [{ translateX: x.value }, { translateY: y.value }],
   }));
 
   return (
@@ -165,7 +165,7 @@ const DraggableFab = ({onPress, onDragEnd, initialX, initialY}) => {
           style={styles.buttonContainer}>
           <Image
             source={require('./assets/ruttl.png')}
-            style={{width: 24, height: 24}}
+            style={{ width: 24, height: 24 }}
           />
         </TouchableOpacity>
       </Animated.View>
@@ -199,6 +199,7 @@ export const BugTracking = ({projectID = '', token = ''}) => {
   const [lastTouch, setLastTouch] = useState([-1, -1]);
   const issueTitleRef = useRef(null);
   const [fabPos, setFabPos] = useState(START_POS);
+const scheme = useColorScheme();
 
   const toggleBottomNavigationView = () => {
     setbtmSheetVisible(!btmSheetVisible);
@@ -219,12 +220,13 @@ export const BugTracking = ({projectID = '', token = ''}) => {
     setPaths([]);
     setVisible(false);
     setWidgetVisible(true);
+    setError(false);
   };
 
   const onScreenCapture = async () => {
     try {
       setWidgetVisible(false);
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
 
       const uri = await captureScreen({
         handleGLSurfaceViewOnAndroid: true,
@@ -276,7 +278,7 @@ export const BugTracking = ({projectID = '', token = ''}) => {
       const apiClient = axios.create({
         // baseURL: `https://us-central1-ruttlp.cloudfunctions.net/mobile/projects/${projectID}`,
         baseURL: `https://us-central1-rally-brucira.cloudfunctions.net/mobile/projects/${projectID}`,
-        headers: {'x-plugin-code': token},
+        headers: { 'x-plugin-code': token },
       });
 
       const saveData = {
@@ -290,11 +292,11 @@ export const BugTracking = ({projectID = '', token = ''}) => {
       };
 
       const {
-        data: {id: ticketID},
+        data: { id: ticketID },
       } = await apiClient.post('/tickets', saveData);
 
       await apiClient
-        .post(`/tickets/${ticketID}/screenshot`, {image: uri})
+        .post(`/tickets/${ticketID}/screenshot`, { image: uri })
         .then(() =>
           Toast.show({
             position: 'top',
@@ -302,7 +304,7 @@ export const BugTracking = ({projectID = '', token = ''}) => {
             text1: 'New ticket added successfully.',
           }),
         )
-        .catch(e => console.log('Error is' + e));
+        .catch((e) => console.log('Error is' + e));
 
       onReset();
     } catch (e) {
@@ -320,15 +322,15 @@ export const BugTracking = ({projectID = '', token = ''}) => {
     }
   };
 
-  const onTouchStart = event => {
+  const onTouchStart = (event) => {
     setLastTouch([event.nativeEvent.locationX, event.nativeEvent.locationY]);
     setTouch(true);
   };
 
-  const onTouchMove = event => {
+  const onTouchMove = (event) => {
     if (isTouch) {
       const newPath = [...currentPath];
-      const {locationX, locationY} = event.nativeEvent;
+      const { locationX, locationY } = event.nativeEvent;
       const newPoint = `${newPath.length === 0 ? 'M' : ''}${locationX.toFixed(
         0,
       )},${locationY.toFixed(0)} `;
@@ -355,16 +357,16 @@ export const BugTracking = ({projectID = '', token = ''}) => {
   const onTouchEnd = () => {
     const currentPaths = [...paths];
     const newPath = [...currentPath];
-    currentPaths.push({color: selectedColor, data: newPath});
+    currentPaths.push({ color: selectedColor, data: newPath });
     setPaths(currentPaths);
     setCurrentPath([]);
   };
 
-  const onUndo = () => setPaths(state => state.slice(0, -1));
+  const onUndo = () => setPaths((state) => state.slice(0, -1));
 
-  const toggleOpen = () => setExpanded(state => !state);
+  const toggleOpen = () => setExpanded((state) => !state);
 
-  const handleCommentChange = text => {
+  const handleCommentChange = (text) => {
     setComment(text);
     if (error && text?.trim()) {
       setError(false);
@@ -399,26 +401,26 @@ export const BugTracking = ({projectID = '', token = ''}) => {
     [loading],
   );
 
-  const scheme = useColorScheme();
-
   const theme = useMemo(() => {
     return {
       background: scheme === 'dark' ? '#2A2A2A' : '#FFFFFF',
       text: scheme === 'dark' ? '#FFFFFF' : '#000000',
+      placeholder: scheme === 'dark' ? '#FFFFFF66' : '#00000066',
     };
   }, [scheme]);
 
   return (
-    <View style={{zIndex: 999}}>
-      {!widgetVisible && <StatusBar backgroundColor={'#000'}></StatusBar>}
+    <View style={{ zIndex: 999 }}>
       <Fragment>
-        {widgetVisible && (
+        {widgetVisible ? (
           <DraggableFab
             onPress={onScreenCapture}
             initialX={fabPos.x}
             initialY={fabPos.y}
             onDragEnd={setFabPos}
           />
+        ) : (
+          <StatusBar backgroundColor={'#000'}></StatusBar>
         )}
 
         <Modal animationType="slide" visible={visible} transparent={false}>
@@ -469,12 +471,12 @@ export const BugTracking = ({projectID = '', token = ''}) => {
                     style={{
                       height: 24,
                       width: 24,
-                      transform: [{rotate: '180deg'}],
+                      transform: [{ rotate: '180deg' }],
                     }}
                   />
                 </Ripple>
                 <RNAnimated.View
-                  style={[styles.colorsContainer, {width: withAnim}]}>
+                  style={[styles.colorsContainer, { width: withAnim }]}>
                   <Ripple
                     onPress={toggleOpen}
                     rippleCentered
@@ -490,10 +492,10 @@ export const BugTracking = ({projectID = '', token = ''}) => {
                     ]}>
                     <Image
                       source={require('./assets/edit_color.png')}
-                      style={{height: 14, width: 14}}
+                      style={{ height: 14, width: 14 }}
                     />
                   </Ripple>
-                  {COLORS.filter(c => c !== selectedColor).map((c, i) => (
+                  {COLORS.filter((c) => c !== selectedColor).map((c, i) => (
                     <Ripple
                       key={i}
                       onPress={onChangeSelectedColor(c)}
@@ -501,7 +503,7 @@ export const BugTracking = ({projectID = '', token = ''}) => {
                       rippleOpacity={0.12}
                       style={[
                         styles.colorButton,
-                        {backgroundColor: c, borderColor: c, marginLeft: 8},
+                        { backgroundColor: c, borderColor: c, marginLeft: 8 },
                       ]}
                     />
                   ))}
@@ -515,7 +517,7 @@ export const BugTracking = ({projectID = '', token = ''}) => {
                   overflow: 'hidden',
                 }}
                 scrollEnabled={false}
-                style={{flex: 1, backgroundColor: '#1F1F1F'}}>
+                style={{ flex: 1, backgroundColor: '#1F1F1F' }}>
                 <View
                   ref={viewRef}
                   style={[styles.svgContainer]}
@@ -526,7 +528,7 @@ export const BugTracking = ({projectID = '', token = ''}) => {
                     <ImageBackground
                       ref={viewRef}
                       resizeMode="contain"
-                      source={{uri: src}}>
+                      source={{ uri: src }}>
                       <Svg height={height} width={width}>
                         <Path
                           d={currentPath.join('')}
@@ -537,7 +539,7 @@ export const BugTracking = ({projectID = '', token = ''}) => {
                           strokeLinecap={'round'}
                         />
                         {paths.length > 0 &&
-                          paths.map(({color, data}, index) => (
+                          paths.map(({ color, data }, index) => (
                             <Path
                               key={`path-${index}`}
                               d={data.join('')}
@@ -561,7 +563,7 @@ export const BugTracking = ({projectID = '', token = ''}) => {
                     <ImageBackground
                       ref={viewRef}
                       resizeMode="contain"
-                      source={{uri: src}}>
+                      source={{ uri: src }}>
                       <Svg height={height} width={width}>
                         <Path
                           d={currentPath.join('')}
@@ -572,7 +574,7 @@ export const BugTracking = ({projectID = '', token = ''}) => {
                           strokeLinecap={'round'}
                         />
                         {paths.length > 0 &&
-                          paths.map(({color, data}, index) => (
+                          paths.map(({ color, data }, index) => (
                             <Path
                               key={`path-${index}`}
                               d={data.join('')}
@@ -612,7 +614,7 @@ export const BugTracking = ({projectID = '', token = ''}) => {
                     ref={issueTitleRef}
                     style={[
                       styles.bottomSheetTextInput,
-                      error && {borderColor: 'red'},
+                      error && { borderColor: 'red' },
                     ]}
                     keyboardType="name-phone-pad"
                     placeholder="Add issue title"
@@ -621,7 +623,7 @@ export const BugTracking = ({projectID = '', token = ''}) => {
                     onChangeText={handleCommentChange}
                   />
                   {error && (
-                    <View style={{width: '100%'}}>
+                    <View style={{ width: '100%' }}>
                       <Text style={[styles.errorText]}>
                         Please enter a comment before submitting
                       </Text>
@@ -630,7 +632,12 @@ export const BugTracking = ({projectID = '', token = ''}) => {
                   <TextInput
                     style={[
                       styles.bottomSheetTextInput,
-                      {height: 164, marginTop: 13},
+                      {
+                        height: 154,
+                        marginTop: 13,
+                        textAlignVertical: 'top',
+                        textAlign: 'justify',
+                      },
                     ]}
                     keyboardType="name-phone-pad"
                     placeholder="Add issue description (optional)"
@@ -645,7 +652,7 @@ export const BugTracking = ({projectID = '', token = ''}) => {
                     disabled={loading}
                     style={[
                       styles.bottomSheetButtonContainer,
-                      {backgroundColor: buttonColor},
+                      { backgroundColor: buttonColor },
                     ]}>
                     <Text style={styles.submitButtonText}>{buttonText}</Text>
                     {loading && <ActivityIndicator color="#fff" />}
@@ -657,10 +664,10 @@ export const BugTracking = ({projectID = '', token = ''}) => {
         </Modal>
         <Toast
           config={{
-            info: props => (
+            info: (props) => (
               <BaseToast
                 {...props}
-                style={{backgroundColor: '#6552ff', borderLeftWidth: 0}}
+                style={{ backgroundColor: '#6552ff', borderLeftWidth: 0 }}
                 text1Style={{
                   color: 'white',
                   fontWeight: '400',
@@ -781,7 +788,6 @@ const styles = StyleSheet.create({
     elevation: 0,
     backgroundColor: '#6552ff',
   },
-
   footerContainer: {
     flexDirection: 'column',
     paddingHorizontal: 14,
@@ -807,6 +813,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     textAlign: 'justify',
     borderRadius: 24,
+    textAlignVertical: 'center',
   },
   rightIconContainer: {
     height: 40,
@@ -849,18 +856,19 @@ const styles = StyleSheet.create({
   },
   bottomSheetTextInput: {
     width: '100%',
-    height: 45,
+    // height: 45,
     borderColor: '#E7E7E7',
     borderWidth: 1,
     borderRadius: 5,
-    paddingHorizontal: 13,
     fontFamily: 'Inter-Medium',
     fontSize: 15,
     fontStyle: 'normal',
     fontWeight: '500',
-    lineHeight: 19.5, // 130% of 15
+    lineHeight: 19.5,
     color: '#160647',
-    textAlignVertical: 'top',
+    textAlignVertical: 'center',
+    paddingHorizontal: 13,
+    paddingVertical: 16,
   },
   bottomSheetButtonContainer: {
     width: '100%',
