@@ -1,6 +1,8 @@
+import axios from 'axios';
+import PropTypes from 'prop-types';
 import React, { Fragment, useEffect, useMemo, useRef, useState } from 'react';
-import { BottomSheet } from 'react-native-btr';
 import {
+  ActivityIndicator,
   Animated as RNAnimated,
   Dimensions,
   Image,
@@ -10,33 +12,31 @@ import {
   Platform,
   SafeAreaView,
   ScrollView,
+  StatusBar,
   StyleSheet,
   Text,
   TextInput,
-  View,
-  ActivityIndicator,
   TouchableOpacity,
-  StatusBar,
   useColorScheme,
+  View,
 } from 'react-native';
-import axios from 'axios';
-import { captureRef, captureScreen } from 'react-native-view-shot';
-import Ripple from 'react-native-material-ripple';
-import { Path, Svg } from 'react-native-svg';
-import PropTypes from 'prop-types';
-import Toast, { BaseToast } from 'react-native-toast-message';
+import { BottomSheet } from 'react-native-btr';
 import { PanGestureHandler } from 'react-native-gesture-handler';
+import Ripple from 'react-native-material-ripple';
 import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  useAnimatedGestureHandler,
-  withTiming,
   runOnJS,
+  useAnimatedGestureHandler,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
 } from 'react-native-reanimated';
+import { Path, Svg } from 'react-native-svg';
+import Toast, { BaseToast } from 'react-native-toast-message';
+import { captureRef, captureScreen } from 'react-native-view-shot';
 
 const PADDING = 24;
 const BUTTON_SIZE = 72;
-const Z_INDEX = 999999999;
+const Z_INDEX = 99999999999999;
 const COLORS = ['#160647', '#FF4F6D', '#FCFF52'];
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const SCREEN_HEIGHT = Dimensions.get('window').height;
@@ -45,8 +45,7 @@ const START_POS = {
   x: SCREEN_WIDTH - BUTTON_SIZE - PADDING,
   y: SCREEN_HEIGHT - BUTTON_SIZE - PADDING,
 };
-
-const height = Dimensions.get('window').height * 0.72;
+const height = SCREEN_HEIGHT * 0.72;
 const width = height * ASPECT_RATIO;
 
 export const CommentInput = ({
@@ -104,12 +103,23 @@ export const CommentInput = ({
   );
 };
 
-const DraggableFab = ({ onPress, onDragEnd, initialX, initialY }) => {
-  const startX = initialX;
-  const startY = initialY;
+const DraggableFab = ({
+  onPress,
+  onDragEnd,
+  initialX,
+  initialY,
+  throttleMs = 800,
+}) => {
+  const x = useSharedValue(initialX);
+  const y = useSharedValue(initialY);
 
-  const x = useSharedValue(startX);
-  const y = useSharedValue(startY);
+  const tapBlocked = useRef(false);
+  const handlePress = () => {
+    if (tapBlocked.current) return;
+    tapBlocked.current = true;
+    onPress?.();
+    setTimeout(() => (tapBlocked.current = false), throttleMs);
+  };
 
   const gesture = useAnimatedGestureHandler({
     onStart: (_, ctx) => {
@@ -130,7 +140,6 @@ const DraggableFab = ({ onPress, onDragEnd, initialX, initialY }) => {
       );
     },
     onEnd: () => {
-      // Find nearest corner
       const toLeft = x.value < SCREEN_WIDTH / 2;
       const toTop = y.value < SCREEN_HEIGHT / 2;
 
@@ -149,19 +158,17 @@ const DraggableFab = ({ onPress, onDragEnd, initialX, initialY }) => {
   }));
 
   return (
-    <PanGestureHandler onGestureEvent={gesture}>
+    <PanGestureHandler
+      hitSlop={{ top: 10, bottom: 10, left: 20, right: 20 }}
+      onGestureEvent={gesture}>
       <Animated.View
         style={[
-          {
-            position: 'absolute',
-            pointerEvents: 'box-none',
-            zIndex: Z_INDEX,
-          },
+          { position: 'absolute', pointerEvents: 'box-none', zIndex: Z_INDEX },
           fabStyle,
         ]}>
         <TouchableOpacity
           activeOpacity={0.7}
-          onPress={onPress}
+          onPress={handlePress}
           style={styles.buttonContainer}>
           <Image
             source={require('./assets/ruttl.png')}
@@ -173,7 +180,7 @@ const DraggableFab = ({ onPress, onDragEnd, initialX, initialY }) => {
   );
 };
 
-export const BugTracking = ({projectID = '', token = ''}) => {
+export const BugTracking = ({ projectID = '', token = '' }) => {
   if (!projectID || !token) {
     throw new Error(
       `Error: Unable to find required prop 'projectID' or 'token' or both.`,
@@ -182,6 +189,8 @@ export const BugTracking = ({projectID = '', token = ''}) => {
 
   const viewRef = useRef();
   const exportRef = useRef();
+  const activePointerId = useRef(null);
+  const isCapturing = useRef(false);
   const [comment, setComment] = useState('');
   const [description, setDescription] = useState('');
   const [currentPath, setCurrentPath] = useState([]);
@@ -199,13 +208,13 @@ export const BugTracking = ({projectID = '', token = ''}) => {
   const [lastTouch, setLastTouch] = useState([-1, -1]);
   const issueTitleRef = useRef(null);
   const [fabPos, setFabPos] = useState(START_POS);
-const scheme = useColorScheme();
+  const scheme = useColorScheme();
 
   const toggleBottomNavigationView = () => {
     setbtmSheetVisible(!btmSheetVisible);
   };
 
-  const onChangeSelectedColor = color => () => {
+  const onChangeSelectedColor = (color) => () => {
     setExpanded(false);
     setTimeout(() => {
       setSelectedColor(color);
@@ -221,10 +230,15 @@ const scheme = useColorScheme();
     setVisible(false);
     setWidgetVisible(true);
     setError(false);
+    isCapturing.current = false;
   };
 
   const onScreenCapture = async () => {
     try {
+      if (isCapturing.current) {
+        return;
+      }
+      isCapturing.current = true;
       setWidgetVisible(false);
       await new Promise((resolve) => setTimeout(resolve, 100));
 
@@ -240,13 +254,12 @@ const scheme = useColorScheme();
         throw new Error('Unsupported view on the screenshot.');
       }
     } catch (e) {
+      isCapturing.current = false;
       setWidgetVisible(true);
-      const message =
-        e.message || 'Something went wrong while taking the screenshot.';
       Toast.show({
         type: 'error',
-        text1: 'Capture error',
-        text2: message,
+        text1: 'Failed to capture this snapshot!',
+        text2: 'Please try again later by clicking the bug icon.',
       });
     }
   };
@@ -262,8 +275,8 @@ const scheme = useColorScheme();
       if (!exportRef.current) {
         Toast.show({
           type: 'error',
-          text1: 'Capture error',
-          text2: 'Screenshot view is not available.',
+          text1: 'Failed to capture this snapshot!',
+          text2: 'Please try again later by clicking the bug icon.',
         });
         return;
       }
@@ -287,8 +300,8 @@ const scheme = useColorScheme();
         // appVersion: '1.0.0',
         // device: 'iPhone',
         height: SCREEN_HEIGHT,
-        osName: Platform.OS,
         width: SCREEN_WIDTH,
+        osName: Platform.OS,
       };
 
       const {
@@ -323,12 +336,16 @@ const scheme = useColorScheme();
   };
 
   const onTouchStart = (event) => {
+    if (event.nativeEvent.touches?.length !== 1) {
+      return;
+    }
+    activePointerId.current = event.nativeEvent.identifier;
     setLastTouch([event.nativeEvent.locationX, event.nativeEvent.locationY]);
     setTouch(true);
   };
 
   const onTouchMove = (event) => {
-    if (isTouch) {
+    if (isTouch && event.nativeEvent.touches?.length === 1) {
       const newPath = [...currentPath];
       const { locationX, locationY } = event.nativeEvent;
       const newPoint = `${newPath.length === 0 ? 'M' : ''}${locationX.toFixed(
@@ -355,15 +372,23 @@ const scheme = useColorScheme();
   };
 
   const onTouchEnd = () => {
-    const currentPaths = [...paths];
-    const newPath = [...currentPath];
-    currentPaths.push({ color: selectedColor, data: newPath });
-    setPaths(currentPaths);
+    // setPaths(currentPaths);
+    // setCurrentPath([]);
+    activePointerId.current = null;
+    if (currentPath.length > 0) {
+      const currentPaths = [...paths];
+      const newPath = [...currentPath];
+      currentPaths.push({ color: selectedColor, data: newPath });
+      setPaths((prev) => [
+        ...prev,
+        { color: selectedColor, data: [...currentPath] },
+      ]);
+    }
     setCurrentPath([]);
+    setTouch(false);
   };
 
   const onUndo = () => setPaths((state) => state.slice(0, -1));
-
   const toggleOpen = () => setExpanded((state) => !state);
 
   const handleCommentChange = (text) => {
@@ -412,18 +437,22 @@ const scheme = useColorScheme();
   return (
     <View style={{ zIndex: 999 }}>
       <Fragment>
-        {widgetVisible ? (
+        {widgetVisible && !src ? (
           <DraggableFab
-            onPress={onScreenCapture}
             initialX={fabPos.x}
             initialY={fabPos.y}
+            throttleMs={1000}
             onDragEnd={setFabPos}
+            onPress={onScreenCapture}
           />
         ) : (
           <StatusBar backgroundColor={'#000'}></StatusBar>
         )}
 
-        <Modal animationType="slide" visible={visible} transparent={false}>
+        <Modal
+          animationType="slide"
+          transparent={false}
+          visible={src && visible}>
           <SafeAreaView style={styles.modalContainer}>
             <View
               style={{
@@ -435,9 +464,7 @@ const scheme = useColorScheme();
               }}>
               <View style={styles.appbarContainer}>
                 <Ripple
-                  onPress={onReset}
                   rippleCentered
-                  rippleColor="rgb(255, 251, 254)"
                   style={[
                     {
                       marginRight: 'auto',
@@ -448,7 +475,9 @@ const scheme = useColorScheme();
                       justifyContent: 'center',
                       alignItems: 'center',
                     },
-                  ]}>
+                  ]}
+                  rippleColor="rgb(255, 251, 254)"
+                  onPress={onReset}>
                   <Text
                     style={{
                       color: theme?.text,
@@ -462,10 +491,10 @@ const scheme = useColorScheme();
                   </Text>
                 </Ripple>
                 <Ripple
-                  onPress={onUndo}
                   rippleCentered
                   rippleColor="rgb(255, 251, 254)"
-                  style={styles.iconButton}>
+                  style={styles.iconButton}
+                  onPress={onUndo}>
                   <Image
                     source={require('./assets/undo.png')}
                     style={{
@@ -478,9 +507,7 @@ const scheme = useColorScheme();
                 <RNAnimated.View
                   style={[styles.colorsContainer, { width: withAnim }]}>
                   <Ripple
-                    onPress={toggleOpen}
                     rippleCentered
-                    rippleOpacity={0.12}
                     style={[
                       styles.colorButton,
                       {
@@ -489,7 +516,9 @@ const scheme = useColorScheme();
                         alignItems: 'center',
                         justifyContent: 'center',
                       },
-                    ]}>
+                    ]}
+                    rippleOpacity={0.12}
+                    onPress={toggleOpen}>
                     <Image
                       source={require('./assets/edit_color.png')}
                       style={{ height: 14, width: 14 }}
@@ -498,13 +527,13 @@ const scheme = useColorScheme();
                   {COLORS.filter((c) => c !== selectedColor).map((c, i) => (
                     <Ripple
                       key={i}
-                      onPress={onChangeSelectedColor(c)}
                       rippleCentered
-                      rippleOpacity={0.12}
                       style={[
                         styles.colorButton,
                         { backgroundColor: c, borderColor: c, marginLeft: 8 },
                       ]}
+                      rippleOpacity={0.12}
+                      onPress={onChangeSelectedColor(c)}
                     />
                   ))}
                 </RNAnimated.View>
@@ -521,9 +550,9 @@ const scheme = useColorScheme();
                 <View
                   ref={viewRef}
                   style={[styles.svgContainer]}
-                  onTouchStart={onTouchStart}
+                  onTouchEnd={onTouchEnd}
                   onTouchMove={onTouchMove}
-                  onTouchEnd={onTouchEnd}>
+                  onTouchStart={onTouchStart}>
                   {src && (
                     <ImageBackground
                       ref={viewRef}
@@ -543,8 +572,8 @@ const scheme = useColorScheme();
                             <Path
                               key={`path-${index}`}
                               d={data.join('')}
-                              stroke={color}
                               fill={'transparent'}
+                              stroke={color}
                               strokeWidth={4}
                               strokeLinejoin={'round'}
                               strokeLinecap={'round'}
@@ -557,8 +586,8 @@ const scheme = useColorScheme();
 
                 <View
                   ref={exportRef}
-                  style={styles.svgContainerHidden}
-                  pointerEvents="none">
+                  pointerEvents="none"
+                  style={styles.svgContainerHidden}>
                   {src && (
                     <ImageBackground
                       ref={viewRef}
@@ -567,22 +596,22 @@ const scheme = useColorScheme();
                       <Svg height={height} width={width}>
                         <Path
                           d={currentPath.join('')}
-                          stroke={selectedColor}
                           fill={'transparent'}
-                          strokeWidth={4}
-                          strokeLinejoin={'round'}
+                          stroke={selectedColor}
                           strokeLinecap={'round'}
+                          strokeLinejoin={'round'}
+                          strokeWidth={4}
                         />
                         {paths.length > 0 &&
                           paths.map(({ color, data }, index) => (
                             <Path
                               key={`path-${index}`}
                               d={data.join('')}
-                              stroke={color}
                               fill={'transparent'}
-                              strokeWidth={4}
-                              strokeLinejoin={'round'}
+                              stroke={color}
                               strokeLinecap={'round'}
+                              strokeLinejoin={'round'}
+                              strokeWidth={4}
                             />
                           ))}
                       </Svg>
@@ -604,10 +633,10 @@ const scheme = useColorScheme();
                 theme={theme}
               />
               <BottomSheet
+                animationType="slide"
                 visible={btmSheetVisible}
                 onBackButtonPress={toggleBottomNavigationView}
-                onBackdropPress={toggleBottomNavigationView}
-                animationType="slide">
+                onBackdropPress={toggleBottomNavigationView}>
                 <View style={styles.bottomSheetContainer}>
                   <View style={styles.bottomSheetIndicator}></View>
                   <TextInput
@@ -630,6 +659,7 @@ const scheme = useColorScheme();
                     </View>
                   )}
                   <TextInput
+                    multiline
                     style={[
                       styles.bottomSheetTextInput,
                       {
@@ -640,20 +670,19 @@ const scheme = useColorScheme();
                       },
                     ]}
                     keyboardType="name-phone-pad"
+                    numberOfLines={5}
                     placeholder="Add issue description (optional)"
                     placeholderTextColor="#16064780"
-                    multiline
-                    numberOfLines={5}
                     value={description}
                     onChangeText={setDescription}
                   />
                   <TouchableOpacity
-                    onPress={onSubmit}
-                    disabled={loading}
                     style={[
                       styles.bottomSheetButtonContainer,
                       { backgroundColor: buttonColor },
-                    ]}>
+                    ]}
+                    disabled={loading}
+                    onPress={onSubmit}>
                     <Text style={styles.submitButtonText}>{buttonText}</Text>
                     {loading && <ActivityIndicator color="#fff" />}
                   </TouchableOpacity>
@@ -662,20 +691,7 @@ const scheme = useColorScheme();
             </KeyboardAvoidingView>
           </SafeAreaView>
         </Modal>
-        <Toast
-          config={{
-            info: (props) => (
-              <BaseToast
-                {...props}
-                style={{ backgroundColor: '#6552ff', borderLeftWidth: 0 }}
-                text1Style={{
-                  color: 'white',
-                  fontWeight: '400',
-                }}
-              />
-            ),
-          }}
-        />
+        <Toast config={{ info: (props) => <BaseToast {...props} /> }} />
       </Fragment>
     </View>
   );
