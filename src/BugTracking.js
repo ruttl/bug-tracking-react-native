@@ -48,6 +48,9 @@ const START_POS = {
 const height = SCREEN_HEIGHT * 0.72;
 const width = height * ASPECT_RATIO;
 
+const ERROR_MESSAGE_TITLE = 'Failed to capture this snapshot!';
+const ERROR_MESSAGE_DESCRIPTION = 'Please try again later.';
+
 export const CommentInput = ({
   comment,
   toggleBottomNavigationView,
@@ -68,9 +71,9 @@ export const CommentInput = ({
           <TextInput
             placeholder={'Report the issue'}
             placeholderTextColor={theme?.placeholder || '#000'}
-            onChangeText={handleCommentChange}
-            value={comment}
             style={[styles.singleTextInput, { color: theme?.text || '#000' }]}
+            value={comment}
+            onChangeText={handleCommentChange}
           />
           <TouchableOpacity onPress={toggleBottomNavigationView}>
             <Image
@@ -84,9 +87,9 @@ export const CommentInput = ({
         <View style={{ width: 8 }} />
 
         <TouchableOpacity
-          onPress={onSubmit}
+          disabled={loading}
           style={styles.rightIconContainer}
-          disabled={loading}>
+          onPress={onSubmit}>
           {loading ? (
             <ActivityIndicator color="#FFF" style={{ paddingHorizontal: 4 }} />
           ) : (
@@ -168,8 +171,8 @@ const DraggableFab = ({
         ]}>
         <TouchableOpacity
           activeOpacity={0.7}
-          onPress={handlePress}
-          style={styles.buttonContainer}>
+          style={styles.buttonContainer}
+          onPress={handlePress}>
           <Image
             source={require('./assets/ruttl.png')}
             style={{ width: 24, height: 24 }}
@@ -229,6 +232,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
     setPaths([]);
     setVisible(false);
     setWidgetVisible(true);
+    setExpanded(false);
     setError(false);
     isCapturing.current = false;
   };
@@ -258,8 +262,8 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
       setWidgetVisible(true);
       Toast.show({
         type: 'error',
-        text1: 'Failed to capture this snapshot!',
-        text2: 'Please try again later by clicking the bug icon.',
+        text1: ERROR_MESSAGE_TITLE,
+        text2: ERROR_MESSAGE_DESCRIPTION,
       });
     }
   };
@@ -275,8 +279,8 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
       if (!exportRef.current) {
         Toast.show({
           type: 'error',
-          text1: 'Failed to capture this snapshot!',
-          text2: 'Please try again later by clicking the bug icon.',
+          text1: ERROR_MESSAGE_TITLE,
+          text2: ERROR_MESSAGE_DESCRIPTION,
         });
         return;
       }
@@ -313,7 +317,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
         .then(() =>
           Toast.show({
             position: 'top',
-            type: 'info',
+            type: 'success',
             text1: 'New ticket added successfully.',
           }),
         )
@@ -326,7 +330,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
 
       Toast.show({
         position: 'top',
-        type: 'info',
+        type: 'error',
         text1: 'Something went wrong',
         text2: e?.message,
       });
@@ -574,9 +578,9 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
                               d={data.join('')}
                               fill={'transparent'}
                               stroke={color}
-                              strokeWidth={4}
-                              strokeLinejoin={'round'}
                               strokeLinecap={'round'}
+                              strokeLinejoin={'round'}
+                              strokeWidth={4}
                             />
                           ))}
                       </Svg>
@@ -625,12 +629,12 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
               style={styles.footerContainer}>
               <CommentInput
                 comment={comment}
-                toggleBottomNavigationView={toggleBottomNavigationView}
-                loading={loading}
-                handleCommentChange={handleCommentChange}
-                onSubmit={onSubmit}
                 error={error}
+                handleCommentChange={handleCommentChange}
+                loading={loading}
                 theme={theme}
+                toggleBottomNavigationView={toggleBottomNavigationView}
+                onSubmit={onSubmit}
               />
               <BottomSheet
                 animationType="slide"
