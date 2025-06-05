@@ -33,6 +33,7 @@ import Animated, {
 import { Path, Svg } from 'react-native-svg';
 import Toast, { BaseToast } from 'react-native-toast-message';
 import { captureRef, captureScreen } from 'react-native-view-shot';
+import { launchImageLibrary } from 'react-native-image-picker';
 
 const PADDING = 24;
 const BUTTON_SIZE = 72;
@@ -207,6 +208,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
   const [error, setError] = useState(false);
   const [isTouch, setTouch] = useState(false);
   const [widgetVisible, setWidgetVisible] = useState(true);
+  const [showImageUpload, setShowImageUpload] = useState(false);
   const withAnim = useRef(new RNAnimated.Value(40)).current;
   const [lastTouch, setLastTouch] = useState([-1, -1]);
   const issueTitleRef = useRef(null);
@@ -234,18 +236,17 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
     setWidgetVisible(true);
     setExpanded(false);
     setError(false);
+    setShowImageUpload(false);
     isCapturing.current = false;
   };
 
   const onScreenCapture = async () => {
     try {
-      if (isCapturing.current) {
-        return;
-      }
+      if (isCapturing.current) return;
       isCapturing.current = true;
+      await new Promise((resolve) => setTimeout(resolve, 200));
       setWidgetVisible(false);
-      await new Promise((resolve) => setTimeout(resolve, 100));
-
+      setVisible(true);
       const uri = await captureScreen({
         handleGLSurfaceViewOnAndroid: true,
         quality: 1,
@@ -253,19 +254,47 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
 
       if (uri) {
         setSrc(uri);
-        setVisible(true);
+        setShowImageUpload(false);
       } else {
-        throw new Error('Unsupported view on the screenshot.');
+        setShowImageUpload(true);
       }
     } catch (e) {
+      setShowImageUpload(true);
+    } finally {
       isCapturing.current = false;
-      setWidgetVisible(true);
-      Toast.show({
-        type: 'error',
-        text1: ERROR_MESSAGE_TITLE,
-        text2: ERROR_MESSAGE_DESCRIPTION,
-      });
     }
+  };
+
+  const openImagePicker = () => {
+    if (typeof launchImageLibrary !== 'function') {
+      console.error(
+        'launchImageLibrary is not available. Check if the module is linked correctly.',
+      );
+      return;
+    }
+
+    launchImageLibrary(
+      {
+        mediaType: 'photo',
+        selectionLimit: 1,
+        quality: 1,
+      },
+      (response) => {
+        if (response.didCancel) {
+          console.log('User cancelled image picker');
+        } else if (response.errorCode) {
+          console.error('ImagePicker Error:', response.errorMessage);
+        } else {
+          const asset = response.assets?.[0];
+          if (asset?.uri) {
+            setSrc(asset.uri);
+            setShowImageUpload(false);
+          } else {
+            console.warn('No image URI returned');
+          }
+        }
+      },
+    );
   };
 
   const onSubmit = async () => {
@@ -438,6 +467,36 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
     };
   }, [scheme]);
 
+  const randerSVG = () => {
+    if (!src) return null;
+    return (
+      <ImageBackground ref={viewRef} resizeMode="contain" source={{ uri: src }}>
+        <Svg height={height} width={width}>
+          <Path
+            d={currentPath.join('')}
+            stroke={selectedColor}
+            fill={'transparent'}
+            strokeWidth={4}
+            strokeLinejoin={'round'}
+            strokeLinecap={'round'}
+          />
+          {paths.length > 0 &&
+            paths.map(({ color, data }, index) => (
+              <Path
+                key={`path-${index}`}
+                d={data.join('')}
+                fill={'transparent'}
+                stroke={color}
+                strokeLinecap={'round'}
+                strokeLinejoin={'round'}
+                strokeWidth={4}
+              />
+            ))}
+        </Svg>
+      </ImageBackground>
+    );
+  };
+
   return (
     <View style={{ zIndex: 999 }}>
       <Fragment>
@@ -453,10 +512,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
           <StatusBar backgroundColor={'#000'}></StatusBar>
         )}
 
-        <Modal
-          animationType="slide"
-          transparent={false}
-          visible={src && visible}>
+        <Modal animationType="slide" transparent={false} visible={visible}>
           <SafeAreaView style={styles.modalContainer}>
             <View
               style={{
@@ -494,53 +550,61 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
                     Close
                   </Text>
                 </Ripple>
-                <Ripple
-                  rippleCentered
-                  rippleColor="rgb(255, 251, 254)"
-                  style={styles.iconButton}
-                  onPress={onUndo}>
-                  <Image
-                    source={require('./assets/undo.png')}
-                    style={{
-                      height: 24,
-                      width: 24,
-                      transform: [{ rotate: '180deg' }],
-                    }}
-                  />
-                </Ripple>
-                <RNAnimated.View
-                  style={[styles.colorsContainer, { width: withAnim }]}>
-                  <Ripple
-                    rippleCentered
-                    style={[
-                      styles.colorButton,
-                      {
-                        backgroundColor: selectedColor,
-                        borderColor: '#fff',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      },
-                    ]}
-                    rippleOpacity={0.12}
-                    onPress={toggleOpen}>
-                    <Image
-                      source={require('./assets/edit_color.png')}
-                      style={{ height: 14, width: 14 }}
-                    />
-                  </Ripple>
-                  {COLORS.filter((c) => c !== selectedColor).map((c, i) => (
+                {src && (
+                  <>
                     <Ripple
-                      key={i}
                       rippleCentered
-                      style={[
-                        styles.colorButton,
-                        { backgroundColor: c, borderColor: c, marginLeft: 8 },
-                      ]}
-                      rippleOpacity={0.12}
-                      onPress={onChangeSelectedColor(c)}
-                    />
-                  ))}
-                </RNAnimated.View>
+                      rippleColor="rgb(255, 251, 254)"
+                      style={styles.iconButton}
+                      onPress={onUndo}>
+                      <Image
+                        source={require('./assets/undo.png')}
+                        style={{
+                          height: 24,
+                          width: 24,
+                          transform: [{ rotate: '180deg' }],
+                        }}
+                      />
+                    </Ripple>
+                    <RNAnimated.View
+                      style={[styles.colorsContainer, { width: withAnim }]}>
+                      <Ripple
+                        rippleCentered
+                        style={[
+                          styles.colorButton,
+                          {
+                            backgroundColor: selectedColor,
+                            borderColor: '#fff',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          },
+                        ]}
+                        rippleOpacity={0.12}
+                        onPress={toggleOpen}>
+                        <Image
+                          source={require('./assets/edit_color.png')}
+                          style={{ height: 14, width: 14 }}
+                        />
+                      </Ripple>
+                      {COLORS.filter((c) => c !== selectedColor).map((c, i) => (
+                        <Ripple
+                          key={i}
+                          rippleCentered
+                          style={[
+                            styles.colorButton,
+                            {
+                              backgroundColor: c,
+                              borderColor: c,
+                              marginLeft: 8,
+                            },
+                          ]}
+                          rippleOpacity={0.12}
+                          onPress={onChangeSelectedColor(c)}
+                        />
+                      ))}
+                    </RNAnimated.View>
+                  </>
+                )}
               </View>
               <ScrollView
                 contentContainerStyle={{
@@ -551,148 +615,118 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
                 }}
                 scrollEnabled={false}
                 style={{ flex: 1, backgroundColor: '#1F1F1F' }}>
-                <View
-                  ref={viewRef}
-                  style={[styles.svgContainer]}
-                  onTouchEnd={onTouchEnd}
-                  onTouchMove={onTouchMove}
-                  onTouchStart={onTouchStart}>
-                  {src && (
-                    <ImageBackground
-                      ref={viewRef}
-                      resizeMode="contain"
-                      source={{ uri: src }}>
-                      <Svg height={height} width={width}>
-                        <Path
-                          d={currentPath.join('')}
-                          stroke={selectedColor}
-                          fill={'transparent'}
-                          strokeWidth={4}
-                          strokeLinejoin={'round'}
-                          strokeLinecap={'round'}
-                        />
-                        {paths.length > 0 &&
-                          paths.map(({ color, data }, index) => (
-                            <Path
-                              key={`path-${index}`}
-                              d={data.join('')}
-                              fill={'transparent'}
-                              stroke={color}
-                              strokeLinecap={'round'}
-                              strokeLinejoin={'round'}
-                              strokeWidth={4}
-                            />
-                          ))}
-                      </Svg>
-                    </ImageBackground>
-                  )}
-                </View>
+                {src || showImageUpload ? (
+                  <>
+                    {src && (
+                      <>
+                        <View
+                          ref={viewRef}
+                          style={[styles.svgContainer]}
+                          onTouchEnd={onTouchEnd}
+                          onTouchMove={onTouchMove}
+                          onTouchStart={onTouchStart}>
+                          {randerSVG()}
+                        </View>
 
-                <View
-                  ref={exportRef}
-                  pointerEvents="none"
-                  style={styles.svgContainerHidden}>
-                  {src && (
-                    <ImageBackground
-                      ref={viewRef}
-                      resizeMode="contain"
-                      source={{ uri: src }}>
-                      <Svg height={height} width={width}>
-                        <Path
-                          d={currentPath.join('')}
-                          fill={'transparent'}
-                          stroke={selectedColor}
-                          strokeLinecap={'round'}
-                          strokeLinejoin={'round'}
-                          strokeWidth={4}
-                        />
-                        {paths.length > 0 &&
-                          paths.map(({ color, data }, index) => (
-                            <Path
-                              key={`path-${index}`}
-                              d={data.join('')}
-                              fill={'transparent'}
-                              stroke={color}
-                              strokeLinecap={'round'}
-                              strokeLinejoin={'round'}
-                              strokeWidth={4}
-                            />
-                          ))}
-                      </Svg>
-                    </ImageBackground>
-                  )}
-                </View>
+                        <View
+                          ref={exportRef}
+                          pointerEvents="none"
+                          style={styles.svgContainerHidden}>
+                          {randerSVG()}
+                        </View>
+                      </>
+                    )}
+                    {showImageUpload && (
+                      <View style={styles.imagePickerContainer}>
+                        <Text style={styles.errorText}>
+                          Failed to take screenshot. Please upload manually.
+                        </Text>
+                        <TouchableOpacity
+                          style={styles.button}
+                          onPress={openImagePicker}>
+                          <Text style={styles.submitButtonText}>
+                            Upload from Device
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+                    )}
+                  </>
+                ) : (
+                  <ActivityIndicator style={{ alignSelf: 'center' }} />
+                )}
               </ScrollView>
             </View>
-            <KeyboardAvoidingView
-              behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-              style={styles.footerContainer}>
-              <CommentInput
-                comment={comment}
-                error={error}
-                handleCommentChange={handleCommentChange}
-                loading={loading}
-                theme={theme}
-                toggleBottomNavigationView={toggleBottomNavigationView}
-                onSubmit={onSubmit}
-              />
-              <BottomSheet
-                animationType="slide"
-                visible={btmSheetVisible}
-                onBackButtonPress={toggleBottomNavigationView}
-                onBackdropPress={toggleBottomNavigationView}>
-                <View style={styles.bottomSheetContainer}>
-                  <View style={styles.bottomSheetIndicator}></View>
-                  <TextInput
-                    ref={issueTitleRef}
-                    style={[
-                      styles.bottomSheetTextInput,
-                      error && { borderColor: 'red' },
-                    ]}
-                    keyboardType="name-phone-pad"
-                    placeholder="Add issue title"
-                    placeholderTextColor="#16064780"
-                    value={comment}
-                    onChangeText={handleCommentChange}
-                  />
-                  {error && (
-                    <View style={{ width: '100%' }}>
-                      <Text style={[styles.errorText]}>
-                        Please enter a comment before submitting
-                      </Text>
-                    </View>
-                  )}
-                  <TextInput
-                    multiline
-                    style={[
-                      styles.bottomSheetTextInput,
-                      {
-                        height: 154,
-                        marginTop: 13,
-                        textAlignVertical: 'top',
-                        textAlign: 'justify',
-                      },
-                    ]}
-                    keyboardType="name-phone-pad"
-                    numberOfLines={5}
-                    placeholder="Add issue description (optional)"
-                    placeholderTextColor="#16064780"
-                    value={description}
-                    onChangeText={setDescription}
-                  />
-                  <TouchableOpacity
-                    style={[
-                      styles.bottomSheetButtonContainer,
-                      { backgroundColor: buttonColor },
-                    ]}
-                    disabled={loading}
-                    onPress={onSubmit}>
-                    <Text style={styles.submitButtonText}>{buttonText}</Text>
-                    {loading && <ActivityIndicator color="#fff" />}
-                  </TouchableOpacity>
-                </View>
-              </BottomSheet>
-            </KeyboardAvoidingView>
+            {src && (
+              <KeyboardAvoidingView
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                style={styles.footerContainer}>
+                <CommentInput
+                  comment={comment}
+                  error={error}
+                  handleCommentChange={handleCommentChange}
+                  loading={loading}
+                  theme={theme}
+                  toggleBottomNavigationView={toggleBottomNavigationView}
+                  onSubmit={onSubmit}
+                />
+                <BottomSheet
+                  animationType="slide"
+                  visible={btmSheetVisible}
+                  onBackButtonPress={toggleBottomNavigationView}
+                  onBackdropPress={toggleBottomNavigationView}>
+                  <View style={styles.bottomSheetContainer}>
+                    <View style={styles.bottomSheetIndicator}></View>
+                    <TextInput
+                      ref={issueTitleRef}
+                      style={[
+                        styles.bottomSheetTextInput,
+                        error && { borderColor: 'red' },
+                      ]}
+                      keyboardType="name-phone-pad"
+                      placeholder="Add issue title"
+                      placeholderTextColor="#16064780"
+                      value={comment}
+                      onChangeText={handleCommentChange}
+                    />
+                    {error && (
+                      <View style={{ width: '100%' }}>
+                        <Text style={[styles.errorText]}>
+                          Please enter a comment before submitting
+                        </Text>
+                      </View>
+                    )}
+                    <TextInput
+                      multiline
+                      style={[
+                        styles.bottomSheetTextInput,
+                        {
+                          height: 154,
+                          marginTop: 13,
+                          textAlignVertical: 'top',
+                          textAlign: 'justify',
+                        },
+                      ]}
+                      keyboardType="name-phone-pad"
+                      numberOfLines={5}
+                      placeholder="Add issue description (optional)"
+                      placeholderTextColor="#16064780"
+                      value={description}
+                      onChangeText={setDescription}
+                    />
+                    <TouchableOpacity
+                      style={[
+                        styles.bottomSheetButtonContainer,
+                        { backgroundColor: buttonColor },
+                      ]}
+                      disabled={loading}
+                      onPress={onSubmit}>
+                      <Text style={styles.submitButtonText}>{buttonText}</Text>
+                      {loading && <ActivityIndicator color="#fff" />}
+                    </TouchableOpacity>
+                  </View>
+                </BottomSheet>
+              </KeyboardAvoidingView>
+            )}
           </SafeAreaView>
         </Modal>
         <Toast config={{ info: (props) => <BaseToast {...props} /> }} />
@@ -748,7 +782,6 @@ const styles = StyleSheet.create({
     // borderColor: '#E7E7E7',
   },
   iconButton: {
-    position: 'relative',
     alignItems: 'center',
     justifyContent: 'center',
     height: 40,
@@ -813,6 +846,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 10,
     backgroundColor: '#000',
+    minHeight: 80,
   },
   inputWrapper: {
     flexDirection: 'row',
@@ -920,6 +954,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     width: '100%',
+  },
+  imagePickerContainer: {
+    justifyContent: 'center',
+    rowGap: 16,
   },
 });
 
