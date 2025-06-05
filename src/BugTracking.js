@@ -1,4 +1,3 @@
-import axios from 'axios';
 import PropTypes from 'prop-types';
 import React, { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -60,6 +59,7 @@ export const CommentInput = ({
   handleCommentChange,
   error,
   theme,
+  disabled,
 }) => {
   return (
     <View style={styles.commentContainer}>
@@ -88,8 +88,11 @@ export const CommentInput = ({
         <View style={{ width: 8 }} />
 
         <TouchableOpacity
-          disabled={loading}
-          style={styles.rightIconContainer}
+          disabled={loading || disabled}
+          style={[
+            styles.rightIconContainer,
+            disabled && { backgroundColor: '#7B7B7B' },
+          ]}
           onPress={onSubmit}>
           {loading ? (
             <ActivityIndicator color="#FFF" style={{ paddingHorizontal: 4 }} />
@@ -112,6 +115,7 @@ const DraggableFab = ({
   onDragEnd,
   initialX,
   initialY,
+  handleLongPress,
   throttleMs = 800,
 }) => {
   const x = useSharedValue(initialX);
@@ -173,7 +177,9 @@ const DraggableFab = ({
         <TouchableOpacity
           activeOpacity={0.7}
           style={styles.buttonContainer}
-          onPress={handlePress}>
+          onPress={handlePress}
+          delayPressOut={300}
+          onLongPress={handleLongPress}>
           <Image
             source={require('./assets/ruttl.png')}
             style={{ width: 24, height: 24 }}
@@ -297,6 +303,77 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
     );
   };
 
+  // const onSubmit = async () => {
+  //   try {
+  //     if (!comment.trim()) {
+  //       setError(true);
+  //       return;
+  //     }
+
+  //     setLoading(true);
+  //     if (!exportRef.current) {
+  //       Toast.show({
+  //         type: 'error',
+  //         text1: ERROR_MESSAGE_TITLE,
+  //         text2: ERROR_MESSAGE_DESCRIPTION,
+  //       });
+  //       return;
+  //     }
+
+  //     const uri = await captureRef(exportRef, {
+  //       result: 'data-uri',
+  //       quality: 1,
+  //       height: SCREEN_HEIGHT,
+  //       width: SCREEN_WIDTH,
+  //     });
+
+  //     const apiClient = axios.create({
+  //       // baseURL: `https://us-central1-ruttlp.cloudfunctions.net/mobile/projects/${projectID}`,
+  //       baseURL: `https://us-central1-rally-brucira.cloudfunctions.net/mobile/projects/${projectID}`,
+  //       headers: { 'x-plugin-code': token },
+  //     });
+
+  //     const saveData = {
+  //       comment,
+  //       description: btmSheetVisible ? description : null,
+  //       // appVersion: '1.0.0',
+  //       // device: 'iPhone',
+  //       height: SCREEN_HEIGHT,
+  //       width: SCREEN_WIDTH,
+  //       osName: Platform.OS,
+  //     };
+
+  //     const {
+  //       data: { id: ticketID },
+  //     } = await apiClient.post('/tickets', saveData);
+
+  //     await apiClient
+  //       .post(`/tickets/${ticketID}/screenshot`, { image: uri })
+  //       .then(() =>
+  //         Toast.show({
+  //           position: 'top',
+  //           type: 'success',
+  //           text1: 'New ticket added successfully.',
+  //         }),
+  //       )
+  //       .catch(e => console.log('Error is' + e));
+
+  //     onReset();
+  //   } catch (e) {
+  //     console.log('Error in request ' + e);
+  //     onReset();
+
+  //     Toast.show({
+  //       position: 'top',
+  //       type: 'error',
+  //       text1: 'Something went wrong',
+  //       text2: e?.message,
+  //     });
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
+
   const onSubmit = async () => {
     try {
       if (!comment.trim()) {
@@ -321,11 +398,12 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
         width: SCREEN_WIDTH,
       });
 
-      const apiClient = axios.create({
-        // baseURL: `https://us-central1-ruttlp.cloudfunctions.net/mobile/projects/${projectID}`,
-        baseURL: `https://us-central1-rally-brucira.cloudfunctions.net/mobile/projects/${projectID}`,
-        headers: { 'x-plugin-code': token },
-      });
+      const baseURL = `https://us-central1-rally-brucira.cloudfunctions.net/mobile/projects/${projectID}`;
+      // baseURL: `https://us-central1-ruttlp.cloudfunctions.net/mobile/projects/${projectID}`,
+      const headers = {
+        'Content-Type': 'application/json',
+        'x-plugin-code': token,
+      };
 
       const saveData = {
         comment,
@@ -337,31 +415,48 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
         osName: Platform.OS,
       };
 
-      const {
-        data: { id: ticketID },
-      } = await apiClient.post('/tickets', saveData);
+      const ticketResponse = await fetch(`${baseURL}/tickets`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(saveData),
+      });
 
-      await apiClient
-        .post(`/tickets/${ticketID}/screenshot`, { image: uri })
-        .then(() =>
-          Toast.show({
-            position: 'top',
-            type: 'success',
-            text1: 'New ticket added successfully.',
-          }),
-        )
-        .catch((e) => console.log('Error is' + e));
+      if (!ticketResponse.ok) {
+        throw new Error('Failed to create ticket');
+      }
+
+      const ticketJson = await ticketResponse.json();
+      const ticketID = ticketJson?.id;
+
+      const screenshotResponse = await fetch(
+        `${baseURL}/tickets/${ticketID}/screenshot`,
+        {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ image: uri }),
+        },
+      );
+
+      if (!screenshotResponse.ok) {
+        throw new Error('Failed to upload screenshot');
+      }
+
+      Toast.show({
+        position: 'top',
+        type: 'success',
+        text1: 'New ticket added successfully.',
+      });
 
       onReset();
     } catch (e) {
-      console.log('Error in request ' + e);
+      console.log('Error in request', e);
       onReset();
 
       Toast.show({
         position: 'top',
         type: 'error',
         text1: 'Something went wrong',
-        text2: e?.message,
+        text2: e?.message || 'Unknown error occurred',
       });
     } finally {
       setLoading(false);
@@ -405,8 +500,6 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
   };
 
   const onTouchEnd = () => {
-    // setPaths(currentPaths);
-    // setCurrentPath([]);
     activePointerId.current = null;
     if (currentPath.length > 0) {
       const currentPaths = [...paths];
@@ -449,14 +542,14 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
     return () => clearTimeout(timeout);
   }, [btmSheetVisible]);
 
-  const buttonColor = useMemo(
-    () => (comment?.trim() !== '' ? '#6552FF' : '#6552FF80'),
-    [comment],
-  );
-
   const buttonText = useMemo(
     () => (loading ? 'Submitting...' : 'Submit'),
     [loading],
+  );
+
+  const buttonColor = useMemo(
+    () => (comment?.trim() !== '' ? '#6552FF' : '#6552FF80'),
+    [comment],
   );
 
   const theme = useMemo(() => {
@@ -466,6 +559,15 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
       placeholder: scheme === 'dark' ? '#FFFFFF66' : '#00000066',
     };
   }, [scheme]);
+
+  const onLongPressHandler = async () => {
+    setWidgetVisible(false);
+    setVisible(true);
+    setSrc('');
+    await new Promise(resolve => setTimeout(resolve, 300));
+    setShowImageUpload(true);
+    openImagePicker();
+  };
 
   const randerSVG = () => {
     if (!src) return null;
@@ -506,6 +608,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
             initialY={fabPos.y}
             throttleMs={1000}
             onDragEnd={setFabPos}
+            handleLongPress={onLongPressHandler}
             onPress={onScreenCapture}
           />
         ) : (
@@ -638,16 +741,31 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
                     )}
                     {showImageUpload && (
                       <View style={styles.imagePickerContainer}>
-                        <Text style={styles.errorText}>
-                          Failed to take screenshot. Please upload manually.
-                        </Text>
-                        <TouchableOpacity
-                          style={styles.button}
-                          onPress={openImagePicker}>
-                          <Text style={styles.submitButtonText}>
-                            Upload from Device
+                        <View style={styles.uploadButtonContainer}>
+                          <Image
+                            source={require('./assets/empty_image.png')}
+                            style={{ height: 70, width: 102 }}
+                          />
+                          <Text style={styles.uploadErrorMessage}>
+                            Failed to capture screenshot.
                           </Text>
-                        </TouchableOpacity>
+                          <TouchableOpacity
+                            style={styles.uploadButton}
+                            onPress={openImagePicker}>
+                            <Image
+                              source={require('./assets/plus.png')}
+                              style={{ height: 24, width: 24 }}
+                            />
+                            <Text style={styles.uploadButtonText}>
+                              Upload image
+                            </Text>
+                          </TouchableOpacity>
+                        </View>
+                        <Text style={styles.bottomMessage}>
+                          Sometimes, the screenshot capturing is blocked due to
+                          native modules. Hence, please upload your screenshot
+                          manually.
+                        </Text>
                       </View>
                     )}
                   </>
@@ -656,77 +774,78 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
                 )}
               </ScrollView>
             </View>
-            {src && (
-              <KeyboardAvoidingView
-                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                style={styles.footerContainer}>
-                <CommentInput
-                  comment={comment}
-                  error={error}
-                  handleCommentChange={handleCommentChange}
-                  loading={loading}
-                  theme={theme}
-                  toggleBottomNavigationView={toggleBottomNavigationView}
-                  onSubmit={onSubmit}
-                />
-                <BottomSheet
-                  animationType="slide"
-                  visible={btmSheetVisible}
-                  onBackButtonPress={toggleBottomNavigationView}
-                  onBackdropPress={toggleBottomNavigationView}>
-                  <View style={styles.bottomSheetContainer}>
-                    <View style={styles.bottomSheetIndicator}></View>
-                    <TextInput
-                      ref={issueTitleRef}
-                      style={[
-                        styles.bottomSheetTextInput,
-                        error && { borderColor: 'red' },
-                      ]}
-                      keyboardType="name-phone-pad"
-                      placeholder="Add issue title"
-                      placeholderTextColor="#16064780"
-                      value={comment}
-                      onChangeText={handleCommentChange}
-                    />
-                    {error && (
-                      <View style={{ width: '100%' }}>
-                        <Text style={[styles.errorText]}>
-                          Please enter a comment before submitting
-                        </Text>
-                      </View>
-                    )}
-                    <TextInput
-                      multiline
-                      style={[
-                        styles.bottomSheetTextInput,
-                        {
-                          height: 154,
-                          marginTop: 13,
-                          textAlignVertical: 'top',
-                          textAlign: 'justify',
-                        },
-                      ]}
-                      keyboardType="name-phone-pad"
-                      numberOfLines={5}
-                      placeholder="Add issue description (optional)"
-                      placeholderTextColor="#16064780"
-                      value={description}
-                      onChangeText={setDescription}
-                    />
-                    <TouchableOpacity
-                      style={[
-                        styles.bottomSheetButtonContainer,
-                        { backgroundColor: buttonColor },
-                      ]}
-                      disabled={loading}
-                      onPress={onSubmit}>
-                      <Text style={styles.submitButtonText}>{buttonText}</Text>
-                      {loading && <ActivityIndicator color="#fff" />}
-                    </TouchableOpacity>
-                  </View>
-                </BottomSheet>
-              </KeyboardAvoidingView>
-            )}
+
+            <KeyboardAvoidingView
+              behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+              style={styles.footerContainer}>
+              <CommentInput
+                comment={comment}
+                error={error}
+                handleCommentChange={handleCommentChange}
+                loading={loading}
+                theme={theme}
+                toggleBottomNavigationView={toggleBottomNavigationView}
+                onSubmit={onSubmit}
+                disabled={!src}
+              />
+              <BottomSheet
+                animationType="slide"
+                visible={btmSheetVisible}
+                onBackButtonPress={toggleBottomNavigationView}
+                onBackdropPress={toggleBottomNavigationView}>
+                <View style={styles.bottomSheetContainer}>
+                  <View style={styles.bottomSheetIndicator}></View>
+                  <TextInput
+                    ref={issueTitleRef}
+                    style={[
+                      styles.bottomSheetTextInput,
+                      error && { borderColor: 'red' },
+                    ]}
+                    keyboardType="name-phone-pad"
+                    placeholder="Add issue title"
+                    placeholderTextColor="#16064780"
+                    value={comment}
+                    onChangeText={handleCommentChange}
+                  />
+                  {error && (
+                    <View style={{ width: '100%' }}>
+                      <Text style={[styles.errorText]}>
+                        Please enter a comment before submitting
+                      </Text>
+                    </View>
+                  )}
+                  <TextInput
+                    multiline
+                    style={[
+                      styles.bottomSheetTextInput,
+                      {
+                        height: 154,
+                        marginTop: 13,
+                        textAlignVertical: 'top',
+                        textAlign: 'justify',
+                      },
+                    ]}
+                    keyboardType="name-phone-pad"
+                    numberOfLines={5}
+                    placeholder="Add issue description (optional)"
+                    placeholderTextColor="#16064780"
+                    value={description}
+                    onChangeText={setDescription}
+                  />
+                  <TouchableOpacity
+                    style={[
+                      styles.bottomSheetButtonContainer,
+                      { backgroundColor: buttonColor },
+                      !src && { backgroundColor: '#7B7B7B' },
+                    ]}
+                    disabled={loading || !src}
+                    onPress={onSubmit}>
+                    <Text style={styles.submitButtonText}>{buttonText}</Text>
+                    {loading && <ActivityIndicator color="#fff" />}
+                  </TouchableOpacity>
+                </View>
+              </BottomSheet>
+            </KeyboardAvoidingView>
           </SafeAreaView>
         </Modal>
         <Toast config={{ info: (props) => <BaseToast {...props} /> }} />
@@ -956,8 +1075,59 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   imagePickerContainer: {
+    alignItems: 'center',
+    height: height,
+    width: width,
+    overflow: 'hidden',
     justifyContent: 'center',
-    rowGap: 16,
+    backgroundColor: '#FFFFFF3C',
+    borderRadius: 16,
+  },
+  uploadButtonContainer: {
+    flex: 1,
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  uploadErrorMessage: {
+    fontWeight: '600',
+    fontSize: 14,
+    lineHeight: 16,
+    color: '#FFFFFF',
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  uploadButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    columnGap: 4,
+    borderRadius: 10,
+    padding: 12,
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  uploadButtonText: {
+    color: '#000',
+    fontSize: 14,
+    fontStyle: 'normal',
+    fontWeight: '600',
+    lineHeight: undefined,
+    letterSpacing: -0.32,
+    textAlign: 'center',
+  },
+  bottomMessage: {
+    color: '#FFFFFFB2',
+    fontWeight: '500',
+    fontSize: 12,
+    lineHeight: 12,
+    letterSpacing: -0.24,
+    textAlign: 'center',
+    padding: 12,
+    paddingHorizontal: 24,
   },
 });
 
