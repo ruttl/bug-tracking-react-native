@@ -225,7 +225,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
     setbtmSheetVisible(!btmSheetVisible);
   };
 
-  const onChangeSelectedColor = color => () => {
+  const onChangeSelectedColor = (color) => () => {
     setExpanded(false);
     setTimeout(() => {
       setSelectedColor(color);
@@ -252,7 +252,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
       isCapturing.current = true;
       setWidgetVisible(false);
       setVisible(true);
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
       const uri = await captureScreen({
         handleGLSurfaceViewOnAndroid: true,
         quality: 1,
@@ -285,7 +285,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
         selectionLimit: 1,
         quality: 1,
       },
-      response => {
+      (response) => {
         if (response.didCancel) {
           console.log('User cancelled image picker');
         } else if (response.errorCode) {
@@ -387,6 +387,9 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
           type: 'error',
           text1: ERROR_MESSAGE_TITLE,
           text2: ERROR_MESSAGE_DESCRIPTION,
+          visibilityTime: 3000,
+          autoHide: true,
+          swipeable: true,
         });
         return;
       }
@@ -405,9 +408,11 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
         'x-plugin-code': token,
       };
 
+      const haveDescription = !!description?.trim();
+
       const saveData = {
         comment,
-        description: btmSheetVisible ? description : null,
+        description: haveDescription ? description?.trim() : null,
         // appVersion: '1.0.0',
         // device: 'iPhone',
         height: SCREEN_HEIGHT,
@@ -445,6 +450,9 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
         position: 'top',
         type: 'success',
         text1: 'New ticket added successfully.',
+        visibilityTime: 3000,
+        autoHide: true,
+        swipeable: true,
       });
 
       onReset();
@@ -457,13 +465,16 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
         type: 'error',
         text1: 'Something went wrong',
         text2: e?.message || 'Unknown error occurred',
+        visibilityTime: 3000,
+        autoHide: true,
+        swipeable: true,
       });
     } finally {
       setLoading(false);
     }
   };
 
-  const onTouchStart = event => {
+  const onTouchStart = (event) => {
     if (event.nativeEvent.touches?.length !== 1) {
       return;
     }
@@ -472,7 +483,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
     setTouch(true);
   };
 
-  const onTouchMove = event => {
+  const onTouchMove = (event) => {
     if (isTouch && event.nativeEvent.touches?.length === 1) {
       const newPath = [...currentPath];
       const { locationX, locationY } = event.nativeEvent;
@@ -505,7 +516,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
       const currentPaths = [...paths];
       const newPath = [...currentPath];
       currentPaths.push({ color: selectedColor, data: newPath });
-      setPaths(prev => [
+      setPaths((prev) => [
         ...prev,
         { color: selectedColor, data: [...currentPath] },
       ]);
@@ -514,10 +525,10 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
     setTouch(false);
   };
 
-  const onUndo = () => setPaths(state => state.slice(0, -1));
-  const toggleOpen = () => setExpanded(state => !state);
+  const onUndo = () => setPaths((state) => state.slice(0, -1));
+  const toggleOpen = () => setExpanded((state) => !state);
 
-  const handleCommentChange = text => {
+  const handleCommentChange = (text) => {
     setComment(text);
     if (error && text?.trim()) {
       setError(false);
@@ -564,7 +575,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
     setWidgetVisible(false);
     setVisible(true);
     setSrc('');
-    await new Promise(resolve => setTimeout(resolve, 200));
+    await new Promise((resolve) => setTimeout(resolve, 200));
     setShowImageUpload(true);
     openImagePicker();
   };
@@ -644,7 +655,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
                     },
                   ]}
                   rippleColor="rgb(255, 251, 254)"
-                  onPress={pageLoaded ? onReset : () => { }}>
+                  onPress={pageLoaded ? onReset : () => {}}>
                   <Text
                     style={{
                       color: theme?.text,
@@ -694,13 +705,17 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
                           style={{ height: 14, width: 14 }}
                         />
                       </Ripple>
-                      {COLORS.filter(c => c !== selectedColor).map((c, i) => (
+                      {COLORS.filter((c) => c !== selectedColor).map((c, i) => (
                         <Ripple
                           key={i}
                           rippleCentered
                           style={[
                             styles.colorButton,
-                            { backgroundColor: c, borderColor: c, marginLeft: 8 },
+                            {
+                              backgroundColor: c,
+                              borderColor: c,
+                              marginLeft: 8,
+                            },
                           ]}
                           rippleOpacity={0.12}
                           onPress={onChangeSelectedColor(c)}
@@ -849,8 +864,8 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
             </KeyboardAvoidingView>
           </SafeAreaView>
         </Modal>
-        <Toast config={{ info: props => <BaseToast {...props} /> }} />
       </Fragment>
+      <Toast />
     </View>
   );
 };
@@ -986,7 +1001,8 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     overflow: 'hidden',
     textAlign: 'justify',
-    borderRadius: 24,
+    borderRadius: 20,
+    paddingLeft: 6,
     textAlignVertical: 'center',
   },
   rightIconContainer: {
