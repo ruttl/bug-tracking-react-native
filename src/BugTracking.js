@@ -21,6 +21,7 @@ import {
 } from 'react-native';
 import { BottomSheet } from 'react-native-btr';
 import { PanGestureHandler } from 'react-native-gesture-handler';
+import { launchImageLibrary } from 'react-native-image-picker';
 import Ripple from 'react-native-material-ripple';
 import Animated, {
   runOnJS,
@@ -32,7 +33,6 @@ import Animated, {
 import { Path, Svg } from 'react-native-svg';
 import Toast, { BaseToast } from 'react-native-toast-message';
 import { captureRef, captureScreen } from 'react-native-view-shot';
-import { launchImageLibrary } from 'react-native-image-picker';
 
 const PADDING = 24;
 const BUTTON_SIZE = 72;
@@ -225,7 +225,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
     setbtmSheetVisible(!btmSheetVisible);
   };
 
-  const onChangeSelectedColor = (color) => () => {
+  const onChangeSelectedColor = color => () => {
     setExpanded(false);
     setTimeout(() => {
       setSelectedColor(color);
@@ -238,8 +238,8 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
     setCurrentPath([]);
     setSrc('');
     setPaths([]);
-    setVisible(false);
     setWidgetVisible(true);
+    setVisible(false);
     setExpanded(false);
     setError(false);
     setShowImageUpload(false);
@@ -285,7 +285,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
         selectionLimit: 1,
         quality: 1,
       },
-      (response) => {
+      response => {
         if (response.didCancel) {
           console.log('User cancelled image picker');
         } else if (response.errorCode) {
@@ -463,7 +463,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
     }
   };
 
-  const onTouchStart = (event) => {
+  const onTouchStart = event => {
     if (event.nativeEvent.touches?.length !== 1) {
       return;
     }
@@ -472,7 +472,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
     setTouch(true);
   };
 
-  const onTouchMove = (event) => {
+  const onTouchMove = event => {
     if (isTouch && event.nativeEvent.touches?.length === 1) {
       const newPath = [...currentPath];
       const { locationX, locationY } = event.nativeEvent;
@@ -505,7 +505,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
       const currentPaths = [...paths];
       const newPath = [...currentPath];
       currentPaths.push({ color: selectedColor, data: newPath });
-      setPaths((prev) => [
+      setPaths(prev => [
         ...prev,
         { color: selectedColor, data: [...currentPath] },
       ]);
@@ -514,10 +514,10 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
     setTouch(false);
   };
 
-  const onUndo = () => setPaths((state) => state.slice(0, -1));
-  const toggleOpen = () => setExpanded((state) => !state);
+  const onUndo = () => setPaths(state => state.slice(0, -1));
+  const toggleOpen = () => setExpanded(state => !state);
 
-  const handleCommentChange = (text) => {
+  const handleCommentChange = text => {
     setComment(text);
     if (error && text?.trim()) {
       setError(false);
@@ -564,7 +564,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
     setWidgetVisible(false);
     setVisible(true);
     setSrc('');
-    await new Promise((resolve) => setTimeout(resolve, 200));
+    await new Promise(resolve => setTimeout(resolve, 200));
     setShowImageUpload(true);
     openImagePicker();
   };
@@ -599,16 +599,20 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
     );
   };
 
+  const pageLoaded = useMemo(() => {
+    return src || showImageUpload ? true : false;
+  }, [src, showImageUpload]);
+
   return (
     <View style={{ zIndex: 999 }}>
       <Fragment>
         {widgetVisible && !src ? (
           <DraggableFab
+            handleLongPress={onLongPressHandler}
             initialX={fabPos.x}
             initialY={fabPos.y}
             throttleMs={1000}
             onDragEnd={setFabPos}
-            handleLongPress={onLongPressHandler}
             onPress={onScreenCapture}
           />
         ) : (
@@ -640,7 +644,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
                     },
                   ]}
                   rippleColor="rgb(255, 251, 254)"
-                  onPress={onReset}>
+                  onPress={pageLoaded ? onReset : () => { }}>
                   <Text
                     style={{
                       color: theme?.text,
@@ -650,6 +654,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
                       lineHeight: 16, // 100% of 16px
                       letterSpacing: -0.32, // -2% of 16px = -0.32
                     }}>
+                    {/* {pageLoaded ? "Close" : <ActivityIndicator />} */}
                     Close
                   </Text>
                 </Ripple>
@@ -689,17 +694,13 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
                           style={{ height: 14, width: 14 }}
                         />
                       </Ripple>
-                      {COLORS.filter((c) => c !== selectedColor).map((c, i) => (
+                      {COLORS.filter(c => c !== selectedColor).map((c, i) => (
                         <Ripple
                           key={i}
                           rippleCentered
                           style={[
                             styles.colorButton,
-                            {
-                              backgroundColor: c,
-                              borderColor: c,
-                              marginLeft: 8,
-                            },
+                            { backgroundColor: c, borderColor: c, marginLeft: 8 },
                           ]}
                           rippleOpacity={0.12}
                           onPress={onChangeSelectedColor(c)}
@@ -848,7 +849,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
             </KeyboardAvoidingView>
           </SafeAreaView>
         </Modal>
-        <Toast config={{ info: (props) => <BaseToast {...props} /> }} />
+        <Toast config={{ info: props => <BaseToast {...props} /> }} />
       </Fragment>
     </View>
   );
