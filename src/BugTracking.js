@@ -252,7 +252,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
       isCapturing.current = true;
       setWidgetVisible(false);
       setVisible(true);
-      await new Promise((resolve) => setTimeout(resolve, 300));
+      await new Promise(resolve => setTimeout(resolve, 100));
       const uri = await captureScreen({
         handleGLSurfaceViewOnAndroid: true,
         quality: 1,
@@ -564,7 +564,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
     setWidgetVisible(false);
     setVisible(true);
     setSrc('');
-    await new Promise((resolve) => setTimeout(resolve, 300));
+    await new Promise((resolve) => setTimeout(resolve, 200));
     setShowImageUpload(true);
     openImagePicker();
   };
