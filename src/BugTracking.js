@@ -31,7 +31,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { Path, Svg } from 'react-native-svg';
-import Toast, { BaseToast } from 'react-native-toast-message';
+import Toast from 'react-native-toast-message';
 import { captureRef, captureScreen } from 'react-native-view-shot';
 
 const PADDING = 24;
@@ -88,11 +88,11 @@ export const CommentInput = ({
         <View style={{ width: 8 }} />
 
         <TouchableOpacity
-          disabled={loading || disabled}
           style={[
             styles.rightIconContainer,
             disabled && { backgroundColor: '#7B7B7B' },
           ]}
+          disabled={loading || disabled}
           onPress={onSubmit}>
           {loading ? (
             <ActivityIndicator color="#FFF" style={{ paddingHorizontal: 4 }} />
@@ -118,10 +118,13 @@ const DraggableFab = ({
   handleLongPress,
   throttleMs = 800,
 }) => {
+  const [showUploadImage, setShowUploadImage] = useState(false);
   const x = useSharedValue(initialX);
   const y = useSharedValue(initialY);
 
   const tapBlocked = useRef(false);
+  const uploadOffset = showUploadImage ? 70 : 0;
+
   const handlePress = () => {
     if (tapBlocked.current) return;
     tapBlocked.current = true;
@@ -140,19 +143,23 @@ const DraggableFab = ({
 
       x.value = Math.max(
         PADDING,
-        Math.min(newX, SCREEN_WIDTH - BUTTON_SIZE - PADDING),
+        Math.min(newX, SCREEN_WIDTH - BUTTON_SIZE - PADDING - uploadOffset),
       );
       y.value = Math.max(
         PADDING,
-        Math.min(newY, SCREEN_HEIGHT - BUTTON_SIZE - PADDING),
+        Math.min(newY, SCREEN_HEIGHT - BUTTON_SIZE - PADDING - uploadOffset),
       );
     },
     onEnd: () => {
       const toLeft = x.value < SCREEN_WIDTH / 2;
       const toTop = y.value < SCREEN_HEIGHT / 2;
 
-      const finalX = toLeft ? PADDING : SCREEN_WIDTH - BUTTON_SIZE - PADDING;
-      const finalY = toTop ? PADDING : SCREEN_HEIGHT - BUTTON_SIZE - PADDING;
+      const finalX = toLeft
+        ? PADDING
+        : SCREEN_WIDTH - BUTTON_SIZE - PADDING - uploadOffset;
+      const finalY = toTop
+        ? PADDING
+        : SCREEN_HEIGHT - BUTTON_SIZE - PADDING - uploadOffset;
 
       x.value = withTiming(finalX, { duration: 400 });
       y.value = withTiming(finalY, { duration: 400 }, () => {
@@ -165,26 +172,84 @@ const DraggableFab = ({
     transform: [{ translateX: x.value }, { translateY: y.value }],
   }));
 
+  const directionStyle = useAnimatedStyle(() => {
+    const isTop = y.value < SCREEN_HEIGHT / 2;
+    const onLeft = x.value < SCREEN_WIDTH / 2;
+    return {
+      flexDirection: !isTop ? 'column' : 'column-reverse',
+      justifyContent: 'center',
+      alignItems: onLeft ? 'flex-start' : 'flex-end',
+    };
+  });
+
+  const uploadButtonStyle = useAnimatedStyle(() => {
+    const isTop = y.value < SCREEN_HEIGHT / 2;
+    return {
+      marginTop: isTop ? 8 : 0,
+      marginBottom: !isTop ? 8 : 0,
+    };
+  });
+
+  useEffect(() => {
+    if (showUploadImage) {
+      const toLeft = x.value < SCREEN_WIDTH / 2;
+      const toTop = y.value < SCREEN_HEIGHT / 2;
+
+      const adjustedX = toLeft
+        ? PADDING
+        : SCREEN_WIDTH - BUTTON_SIZE - PADDING - uploadOffset - 20;
+      const adjustedY = toTop
+        ? PADDING
+        : SCREEN_HEIGHT - BUTTON_SIZE - PADDING - uploadOffset;
+
+      x.value = withTiming(adjustedX, { duration: 100 });
+      y.value = withTiming(adjustedY, { duration: 100 });
+    }
+  }, [showUploadImage]);
+
   return (
     <PanGestureHandler
       hitSlop={{ top: 10, bottom: 10, left: 20, right: 20 }}
       onGestureEvent={gesture}>
       <Animated.View
         style={[
-          { position: 'absolute', pointerEvents: 'box-none', zIndex: Z_INDEX },
+          {
+            position: 'absolute',
+            pointerEvents: 'box-none',
+            zIndex: Z_INDEX,
+          },
           fabStyle,
         ]}>
-        <TouchableOpacity
-          activeOpacity={0.7}
-          style={styles.buttonContainer}
-          onPress={handlePress}
-          delayPressOut={300}
-          onLongPress={handleLongPress}>
-          <Image
-            source={require('./assets/ruttl.png')}
-            style={{ width: 24, height: 24 }}
-          />
-        </TouchableOpacity>
+        <Animated.View style={directionStyle}>
+          {showUploadImage && (
+            <Animated.View style={uploadButtonStyle}>
+              <TouchableOpacity
+                style={styles.uploadButton}
+                onPress={() => {
+                  setShowUploadImage(false);
+                  handleLongPress?.();
+                }}>
+                <Image
+                  source={require('./assets/plus.png')}
+                  style={styles.uploadIcon}
+                />
+                <Text style={styles.uploadText}>Upload Image</Text>
+              </TouchableOpacity>
+            </Animated.View>
+          )}
+
+          <TouchableOpacity
+            activeOpacity={0.7}
+            delayPressOut={300}
+            style={styles.buttonContainer}
+            onLongPress={() => setShowUploadImage(true)}
+            onPress={handlePress}>
+            <Image
+              source={require('./assets/ruttl.png')}
+              style={{ width: 24, height: 24 }}
+            />
+          </TouchableOpacity>
+        </Animated.View>
       </Animated.View>
     </PanGestureHandler>
   );
@@ -587,11 +652,11 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
         <Svg height={height} width={width}>
           <Path
             d={currentPath.join('')}
-            stroke={selectedColor}
             fill={'transparent'}
-            strokeWidth={4}
-            strokeLinejoin={'round'}
+            stroke={selectedColor}
             strokeLinecap={'round'}
+            strokeLinejoin={'round'}
+            strokeWidth={4}
           />
           {paths.length > 0 &&
             paths.map(({ color, data }, index) => (
@@ -620,8 +685,8 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
         {widgetVisible && !src ? (
           <DraggableFab
             handleLongPress={onLongPressHandler}
-            initialX={fabPos.x}
-            initialY={fabPos.y}
+            initialX={START_POS.x}
+            initialY={START_POS.y}
             throttleMs={1000}
             onDragEnd={setFabPos}
             onPress={onScreenCapture}
@@ -766,14 +831,14 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
                             Failed to capture screenshot.
                           </Text>
                           <TouchableOpacity
-                            style={styles.uploadButton}
+                            style={styles.uploadButtonShow}
                             onPress={openImagePicker}>
                             <Image
                               source={require('./assets/plus.png')}
                               style={{ height: 24, width: 24 }}
                             />
                             <Text style={styles.uploadButtonText}>
-                              Upload image
+                              Upload Image
                             </Text>
                           </TouchableOpacity>
                         </View>
@@ -1002,7 +1067,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     textAlign: 'justify',
     borderRadius: 20,
-    paddingLeft: 6,
+    paddingLeft: 10,
     textAlignVertical: 'center',
   },
   rightIconContainer: {
@@ -1145,6 +1210,30 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     padding: 12,
     paddingHorizontal: 24,
+  },
+
+  uploadButtonShow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  uploadIcon: {
+    width: 16,
+    height: 16,
+    resizeMode: 'contain',
+  },
+  uploadText: {
+    fontSize: 14,
+    color: '#333',
+    fontWeight: '500',
   },
 });
 
