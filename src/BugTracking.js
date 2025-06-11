@@ -61,6 +61,7 @@ export const CommentInput = ({
   error,
   theme,
   disabled,
+  buttonColor,
 }) => {
   return (
     <View style={styles.commentContainer}>
@@ -91,7 +92,7 @@ export const CommentInput = ({
         <TouchableOpacity
           style={[
             styles.rightIconContainer,
-            disabled && { backgroundColor: '#7B7B7B' },
+            { backgroundColor: buttonColor },
           ]}
           disabled={loading || disabled}
           onPress={onSubmit}>
@@ -122,7 +123,6 @@ const DraggableFab = ({
   const x = useSharedValue(initialX);
   const y = useSharedValue(initialY);
   const [showUploadOption, setShowUploadOption] = useState(false);
-
   const tapBlocked = useRef(false);
 
   const handlePress = () => {
@@ -285,7 +285,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
     setbtmSheetVisible(!btmSheetVisible);
   };
 
-  const onChangeSelectedColor = (color) => () => {
+  const onChangeSelectedColor = color => () => {
     setExpanded(false);
     setTimeout(() => {
       setSelectedColor(color);
@@ -313,7 +313,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
       isCapturing.current = true;
       setWidgetVisible(false);
       setVisible(true);
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      await new Promise(resolve => setTimeout(resolve, 500));
       const uri = await captureScreen({
         handleGLSurfaceViewOnAndroid: true,
         quality: 1,
@@ -346,7 +346,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
         selectionLimit: 1,
         quality: 1,
       },
-      (response) => {
+      response => {
         if (response.didCancel) {
           console.log('User cancelled image picker');
         } else if (response.errorCode) {
@@ -367,24 +367,23 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
   };
 
   const onSubmit = async () => {
-    setLoading(true);
     if (!comment.trim()) {
       setError(true);
       return;
     }
-
     if (!exportRef.current) {
       Toast.show({
         type: 'error',
         text1: ERROR_MESSAGE_TITLE,
         text2: ERROR_MESSAGE_DESCRIPTION,
-        visibilityTime: 3000,
+        visibilityTime: 2000,
         autoHide: true,
       });
       return;
     }
 
     try {
+      setLoading(true);
       const uri = await captureRef(exportRef, {
         result: 'data-uri',
         quality: 1,
@@ -406,13 +405,6 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
       setTimeout(() => {
         onReset();
       }, 1000);
-
-      Toast.show({
-        position: 'top',
-        type: 'success',
-        text1: 'Submitting ticket...',
-        visibilityTime: 2500,
-      });
 
       // Submit in background (async)
       const backgroundSubmit = async () => {
@@ -477,7 +469,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
     }
   };
 
-  const onTouchStart = (event) => {
+  const onTouchStart = event => {
     if (event.nativeEvent.touches?.length !== 1) {
       return;
     }
@@ -486,7 +478,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
     setTouch(true);
   };
 
-  const onTouchMove = (event) => {
+  const onTouchMove = event => {
     if (isTouch && event.nativeEvent.touches?.length === 1) {
       const newPath = [...currentPath];
       const { locationX, locationY } = event.nativeEvent;
@@ -519,7 +511,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
       const currentPaths = [...paths];
       const newPath = [...currentPath];
       currentPaths.push({ color: selectedColor, data: newPath });
-      setPaths((prev) => [
+      setPaths(prev => [
         ...prev,
         { color: selectedColor, data: [...currentPath] },
       ]);
@@ -528,10 +520,10 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
     setTouch(false);
   };
 
-  const onUndo = () => setPaths((state) => state.slice(0, -1));
-  const toggleOpen = () => setExpanded((state) => !state);
+  const onUndo = () => setPaths(state => state.slice(0, -1));
+  const toggleOpen = () => setExpanded(state => !state);
 
-  const handleCommentChange = (text) => {
+  const handleCommentChange = text => {
     setComment(text);
     if (error && text?.trim()) {
       setError(false);
@@ -561,11 +553,6 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
     [loading],
   );
 
-  const buttonColor = useMemo(
-    () => (comment?.trim() !== '' ? '#6552FF' : '#6552FF80'),
-    [comment],
-  );
-
   const theme = useMemo(() => {
     return {
       background: scheme === 'dark' ? '#2A2A2A' : '#FFFFFF',
@@ -578,7 +565,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
     setWidgetVisible(false);
     setVisible(true);
     setSrc('');
-    await new Promise((resolve) => setTimeout(resolve, 200));
+    await new Promise(resolve => setTimeout(resolve, 200));
     setShowImageUpload(true);
     openImagePicker();
   };
@@ -590,11 +577,11 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
         <Svg height={height} width={width}>
           <Path
             d={currentPath.join('')}
-            fill={'transparent'}
             stroke={selectedColor}
-            strokeLinecap={'round'}
-            strokeLinejoin={'round'}
+            fill={'transparent'}
             strokeWidth={4}
+            strokeLinejoin={'round'}
+            strokeLinecap={'round'}
           />
           {paths.length > 0 &&
             paths.map(({ color, data }, index) => (
@@ -616,6 +603,14 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
   const pageLoaded = useMemo(() => {
     return src || showImageUpload ? true : false;
   }, [src, showImageUpload]);
+
+  const disabledButton = useMemo(() => {
+    return !src || !comment?.trim();
+  }, [src, comment]);
+
+  const buttonColor = useMemo(() => {
+    return disabledButton ? "#7B7B7B" : "#6552FF";
+  }, [disabledButton]);
 
   return (
     <View style={{ zIndex: 999 }}>
@@ -658,7 +653,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
                     },
                   ]}
                   rippleColor="rgb(255, 251, 254)"
-                  onPress={pageLoaded ? onReset : () => {}}>
+                  onPress={pageLoaded ? onReset : () => { }}>
                   <Text
                     style={{
                       color: theme?.text,
@@ -707,7 +702,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
                           style={{ height: 14, width: 14 }}
                         />
                       </Ripple>
-                      {COLORS.filter((c) => c !== selectedColor).map((c, i) => (
+                      {COLORS.filter(c => c !== selectedColor).map((c, i) => (
                         <Ripple
                           key={i}
                           rippleCentered
@@ -800,13 +795,14 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
               style={styles.footerContainer}>
               <CommentInput
                 comment={comment}
-                disabled={!src}
+                disabled={disabledButton}
                 error={error}
                 handleCommentChange={handleCommentChange}
                 loading={loading}
                 theme={theme}
                 toggleBottomNavigationView={toggleBottomNavigationView}
                 onSubmit={onSubmit}
+                buttonColor={buttonColor}
               />
               <BottomSheet
                 animationType="slide"
@@ -842,7 +838,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
                         height: 154,
                         marginTop: 13,
                         textAlignVertical: 'top',
-                        textAlign: 'justify',
+                        textAlign: 'auto',
                       },
                     ]}
                     keyboardType="name-phone-pad"
@@ -856,9 +852,8 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
                     style={[
                       styles.bottomSheetButtonContainer,
                       { backgroundColor: buttonColor },
-                      !src && { backgroundColor: '#7B7B7B' },
                     ]}
-                    disabled={loading || !src}
+                    disabled={loading || disabledButton}
                     onPress={onSubmit}>
                     <Text style={styles.submitButtonText}>{buttonText}</Text>
                     {loading && <ActivityIndicator color="#fff" />}
@@ -1130,7 +1125,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 8,
     elevation: 4,
-    borderWidth: 0.001,
   },
   uploadButtonText: {
     color: '#000',
