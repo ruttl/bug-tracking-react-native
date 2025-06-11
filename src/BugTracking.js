@@ -16,6 +16,7 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   useColorScheme,
   View,
 } from 'react-native';
@@ -118,12 +119,11 @@ const DraggableFab = ({
   handleLongPress,
   throttleMs = 800,
 }) => {
-  const [showUploadImage, setShowUploadImage] = useState(false);
   const x = useSharedValue(initialX);
   const y = useSharedValue(initialY);
+  const [showUploadOption, setShowUploadOption] = useState(false);
 
   const tapBlocked = useRef(false);
-  const uploadOffset = showUploadImage ? 70 : 0;
 
   const handlePress = () => {
     if (tapBlocked.current) return;
@@ -143,23 +143,19 @@ const DraggableFab = ({
 
       x.value = Math.max(
         PADDING,
-        Math.min(newX, SCREEN_WIDTH - BUTTON_SIZE - PADDING - uploadOffset),
+        Math.min(newX, SCREEN_WIDTH - BUTTON_SIZE - PADDING),
       );
       y.value = Math.max(
         PADDING,
-        Math.min(newY, SCREEN_HEIGHT - BUTTON_SIZE - PADDING - uploadOffset),
+        Math.min(newY, SCREEN_HEIGHT - BUTTON_SIZE - PADDING),
       );
     },
     onEnd: () => {
       const toLeft = x.value < SCREEN_WIDTH / 2;
       const toTop = y.value < SCREEN_HEIGHT / 2;
 
-      const finalX = toLeft
-        ? PADDING
-        : SCREEN_WIDTH - BUTTON_SIZE - PADDING - uploadOffset;
-      const finalY = toTop
-        ? PADDING
-        : SCREEN_HEIGHT - BUTTON_SIZE - PADDING - uploadOffset;
+      const finalX = toLeft ? PADDING : SCREEN_WIDTH - BUTTON_SIZE - PADDING;
+      const finalY = toTop ? PADDING : SCREEN_HEIGHT - BUTTON_SIZE - PADDING;
 
       x.value = withTiming(finalX, { duration: 400 });
       y.value = withTiming(finalY, { duration: 400 }, () => {
@@ -173,85 +169,84 @@ const DraggableFab = ({
   }));
 
   const directionStyle = useAnimatedStyle(() => {
-    const isTop = y.value < SCREEN_HEIGHT / 2;
-    const onLeft = x.value < SCREEN_WIDTH / 2;
+    const isLeft = x.value < SCREEN_WIDTH / 2;
+
     return {
-      flexDirection: !isTop ? 'column' : 'column-reverse',
-      justifyContent: 'center',
-      alignItems: onLeft ? 'flex-start' : 'flex-end',
+      flexDirection: isLeft ? 'row' : 'row-reverse',
+      alignItems: 'center',
     };
-  });
+  }, [showUploadOption]);
 
   const uploadButtonStyle = useAnimatedStyle(() => {
     const isTop = y.value < SCREEN_HEIGHT / 2;
+
     return {
-      marginTop: isTop ? 8 : 0,
-      marginBottom: !isTop ? 8 : 0,
+      position: 'absolute',
+      top: isTop ? BUTTON_SIZE : -BUTTON_SIZE + 16,
     };
-  });
-
-  useEffect(() => {
-    if (showUploadImage) {
-      const toLeft = x.value < SCREEN_WIDTH / 2;
-      const toTop = y.value < SCREEN_HEIGHT / 2;
-
-      const adjustedX = toLeft
-        ? PADDING
-        : SCREEN_WIDTH - BUTTON_SIZE - PADDING - uploadOffset - 20;
-      const adjustedY = toTop
-        ? PADDING
-        : SCREEN_HEIGHT - BUTTON_SIZE - PADDING - uploadOffset;
-
-      x.value = withTiming(adjustedX, { duration: 100 });
-      y.value = withTiming(adjustedY, { duration: 100 });
-    }
-  }, [showUploadImage]);
+  }, [showUploadOption]);
 
   return (
-    <PanGestureHandler
-      hitSlop={{ top: 10, bottom: 10, left: 20, right: 20 }}
-      onGestureEvent={gesture}>
-      <Animated.View
-        style={[
-          {
-            position: 'absolute',
-            pointerEvents: 'box-none',
-            zIndex: Z_INDEX,
-          },
-          fabStyle,
-        ]}>
-        <Animated.View style={directionStyle}>
-          {showUploadImage && (
-            <Animated.View style={uploadButtonStyle}>
-              <TouchableOpacity
-                style={styles.uploadButton}
-                onPress={() => {
-                  setShowUploadImage(false);
-                  handleLongPress?.();
-                }}>
-                <Image
-                  source={require('./assets/plus.png')}
-                  style={styles.uploadIcon}
-                />
-                <Text style={styles.uploadText}>Upload Image</Text>
-              </TouchableOpacity>
-            </Animated.View>
-          )}
+    <>
+      {showUploadOption && (
+        <TouchableWithoutFeedback onPress={() => setShowUploadOption(false)}>
+          <View
+            style={{
+              position: 'absolute',
+              left: 0,
+              right: 0,
+              zIndex: Z_INDEX - 1,
+              height: SCREEN_HEIGHT,
+            }}
+          />
+        </TouchableWithoutFeedback>
+      )}
 
-          <TouchableOpacity
-            activeOpacity={0.7}
-            delayPressOut={300}
-            style={styles.buttonContainer}
-            onLongPress={() => setShowUploadImage(true)}
-            onPress={handlePress}>
-            <Image
-              source={require('./assets/ruttl.png')}
-              style={{ width: 24, height: 24 }}
-            />
-          </TouchableOpacity>
+      <PanGestureHandler
+        hitSlop={{ top: 10, bottom: 10, left: 20, right: 20 }}
+        onGestureEvent={gesture}>
+        <Animated.View
+          style={[
+            {
+              position: 'absolute',
+              pointerEvents: 'box-none',
+              zIndex: Z_INDEX,
+            },
+            fabStyle,
+          ]}>
+          <Animated.View style={directionStyle}>
+            {showUploadOption && (
+              <Animated.View style={uploadButtonStyle}>
+                <TouchableOpacity
+                  style={styles.uploadButton}
+                  onPress={() => {
+                    setShowUploadOption(false);
+                    handleLongPress?.();
+                  }}>
+                  <Image
+                    source={require('./assets/plus.png')}
+                    style={styles.uploadIcon}
+                  />
+                  <Text style={styles.uploadText}>Upload Image</Text>
+                </TouchableOpacity>
+              </Animated.View>
+            )}
+
+            <TouchableOpacity
+              activeOpacity={0.7}
+              delayPressOut={300}
+              style={styles.buttonContainer}
+              onLongPress={() => setShowUploadOption(true)}
+              onPress={handlePress}>
+              <Image
+                source={require('./assets/ruttl.png')}
+                style={{ width: 24, height: 24 }}
+              />
+            </TouchableOpacity>
+          </Animated.View>
         </Animated.View>
-      </Animated.View>
-    </PanGestureHandler>
+      </PanGestureHandler>
+    </>
   );
 };
 
@@ -307,6 +302,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
     setVisible(false);
     setExpanded(false);
     setError(false);
+    setLoading(false);
     setShowImageUpload(false);
     isCapturing.current = false;
   };
@@ -358,8 +354,10 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
         } else {
           const asset = response.assets?.[0];
           if (asset?.uri) {
-            setSrc(asset.uri);
             setShowImageUpload(false);
+            setTimeout(() => {
+              setSrc(asset.uri);
+            }, 1200);
           } else {
             console.warn('No image URI returned');
           }
@@ -368,97 +366,25 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
     );
   };
 
-  // const onSubmit = async () => {
-  //   try {
-  //     if (!comment.trim()) {
-  //       setError(true);
-  //       return;
-  //     }
-
-  //     setLoading(true);
-  //     if (!exportRef.current) {
-  //       Toast.show({
-  //         type: 'error',
-  //         text1: ERROR_MESSAGE_TITLE,
-  //         text2: ERROR_MESSAGE_DESCRIPTION,
-  //       });
-  //       return;
-  //     }
-
-  //     const uri = await captureRef(exportRef, {
-  //       result: 'data-uri',
-  //       quality: 1,
-  //       height: SCREEN_HEIGHT,
-  //       width: SCREEN_WIDTH,
-  //     });
-
-  //     const apiClient = axios.create({
-  //       // baseURL: `https://us-central1-ruttlp.cloudfunctions.net/mobile/projects/${projectID}`,
-  //       baseURL: `https://us-central1-rally-brucira.cloudfunctions.net/mobile/projects/${projectID}`,
-  //       headers: { 'x-plugin-code': token },
-  //     });
-
-  //     const saveData = {
-  //       comment,
-  //       description: btmSheetVisible ? description : null,
-  //       // appVersion: '1.0.0',
-  //       // device: 'iPhone',
-  //       height: SCREEN_HEIGHT,
-  //       width: SCREEN_WIDTH,
-  //       osName: Platform.OS,
-  //     };
-
-  //     const {
-  //       data: { id: ticketID },
-  //     } = await apiClient.post('/tickets', saveData);
-
-  //     await apiClient
-  //       .post(`/tickets/${ticketID}/screenshot`, { image: uri })
-  //       .then(() =>
-  //         Toast.show({
-  //           position: 'top',
-  //           type: 'success',
-  //           text1: 'New ticket added successfully.',
-  //         }),
-  //       )
-  //       .catch(e => console.log('Error is' + e));
-
-  //     onReset();
-  //   } catch (e) {
-  //     console.log('Error in request ' + e);
-  //     onReset();
-
-  //     Toast.show({
-  //       position: 'top',
-  //       type: 'error',
-  //       text1: 'Something went wrong',
-  //       text2: e?.message,
-  //     });
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
-
   const onSubmit = async () => {
+    setLoading(true);
+    if (!comment.trim()) {
+      setError(true);
+      return;
+    }
+
+    if (!exportRef.current) {
+      Toast.show({
+        type: 'error',
+        text1: ERROR_MESSAGE_TITLE,
+        text2: ERROR_MESSAGE_DESCRIPTION,
+        visibilityTime: 3000,
+        autoHide: true,
+      });
+      return;
+    }
+
     try {
-      if (!comment.trim()) {
-        setError(true);
-        return;
-      }
-
-      setLoading(true);
-      if (!exportRef.current) {
-        Toast.show({
-          type: 'error',
-          text1: ERROR_MESSAGE_TITLE,
-          text2: ERROR_MESSAGE_DESCRIPTION,
-          visibilityTime: 3000,
-          autoHide: true,
-          swipeable: true,
-        });
-        return;
-      }
-
       const uri = await captureRef(exportRef, {
         result: 'data-uri',
         quality: 1,
@@ -466,15 +392,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
         width: SCREEN_WIDTH,
       });
 
-      const baseURL = `https://us-central1-rally-brucira.cloudfunctions.net/mobile/projects/${projectID}`;
-      // baseURL: `https://us-central1-ruttlp.cloudfunctions.net/mobile/projects/${projectID}`,
-      const headers = {
-        'Content-Type': 'application/json',
-        'x-plugin-code': token,
-      };
-
       const haveDescription = !!description?.trim();
-
       const saveData = {
         comment,
         description: haveDescription ? description?.trim() : null,
@@ -485,46 +403,69 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
         osName: Platform.OS,
       };
 
-      const ticketResponse = await fetch(`${baseURL}/tickets`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(saveData),
-      });
-
-      if (!ticketResponse.ok) {
-        throw new Error('Failed to create ticket');
-      }
-
-      const ticketJson = await ticketResponse.json();
-      const ticketID = ticketJson?.id;
-
-      const screenshotResponse = await fetch(
-        `${baseURL}/tickets/${ticketID}/screenshot`,
-        {
-          method: 'POST',
-          headers,
-          body: JSON.stringify({ image: uri }),
-        },
-      );
-
-      if (!screenshotResponse.ok) {
-        throw new Error('Failed to upload screenshot');
-      }
+      setTimeout(() => {
+        onReset();
+      }, 1000);
 
       Toast.show({
         position: 'top',
         type: 'success',
-        text1: 'New ticket added successfully.',
-        visibilityTime: 3000,
-        autoHide: true,
-        swipeable: true,
+        text1: 'Submitting ticket...',
+        visibilityTime: 2500,
       });
 
-      onReset();
-    } catch (e) {
-      console.log('Error in request', e);
-      onReset();
+      // Submit in background (async)
+      const backgroundSubmit = async () => {
+        const baseURL = `https://us-central1-rally-brucira.cloudfunctions.net/mobile/projects/${projectID}`;
+        const headers = {
+          'Content-Type': 'application/json',
+          'x-plugin-code': token,
+        };
 
+        try {
+          const ticketResponse = await fetch(`${baseURL}/tickets`, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify(saveData),
+          });
+
+          if (!ticketResponse.ok) throw new Error('Failed to create ticket');
+
+          const ticketJson = await ticketResponse.json();
+          const ticketID = ticketJson?.id;
+
+          const screenshotResponse = await fetch(
+            `${baseURL}/tickets/${ticketID}/screenshot`,
+            {
+              method: 'POST',
+              headers,
+              body: JSON.stringify({ image: uri }),
+            },
+          );
+
+          if (!screenshotResponse.ok)
+            throw new Error('Failed to upload screenshot');
+
+          Toast.show({
+            type: 'success',
+            text1: 'New ticket added successfully.',
+            visibilityTime: 2000,
+            autoHide: true,
+          });
+        } catch (err) {
+          Toast.show({
+            type: 'error',
+            text1: 'Ticket upload failed in background',
+            text2: err.message || 'Unknown error',
+            visibilityTime: 2000,
+            autoHide: true,
+          });
+        }
+      };
+
+      backgroundSubmit();
+    } catch (e) {
+      console.log('Error before background submit', e);
       Toast.show({
         position: 'top',
         type: 'error',
@@ -532,10 +473,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
         text2: e?.message || 'Unknown error occurred',
         visibilityTime: 3000,
         autoHide: true,
-        swipeable: true,
       });
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -685,8 +623,8 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
         {widgetVisible && !src ? (
           <DraggableFab
             handleLongPress={onLongPressHandler}
-            initialX={START_POS.x}
-            initialY={START_POS.y}
+            initialX={fabPos.x}
+            initialY={fabPos.y}
             throttleMs={1000}
             onDragEnd={setFabPos}
             onPress={onScreenCapture}
@@ -730,7 +668,6 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
                       lineHeight: 16, // 100% of 16px
                       letterSpacing: -0.32, // -2% of 16px = -0.32
                     }}>
-                    {/* {pageLoaded ? "Close" : <ActivityIndicator />} */}
                     Close
                   </Text>
                 </Ripple>
@@ -851,7 +788,9 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
                     )}
                   </>
                 ) : (
-                  <ActivityIndicator style={{ alignSelf: 'center' }} />
+                  <View style={styles.imagePickerContainer}>
+                    <ActivityIndicator style={{ alignSelf: 'center' }} />
+                  </View>
                 )}
               </ScrollView>
             </View>
@@ -861,13 +800,13 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
               style={styles.footerContainer}>
               <CommentInput
                 comment={comment}
+                disabled={!src}
                 error={error}
                 handleCommentChange={handleCommentChange}
                 loading={loading}
                 theme={theme}
                 toggleBottomNavigationView={toggleBottomNavigationView}
                 onSubmit={onSubmit}
-                disabled={!src}
               />
               <BottomSheet
                 animationType="slide"
@@ -930,7 +869,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
           </SafeAreaView>
         </Modal>
       </Fragment>
-      <Toast />
+      <Toast autoHide={true} visibilityTime={3000} />
     </View>
   );
 };
@@ -1191,6 +1130,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 8,
     elevation: 4,
+    borderWidth: 0.001,
   },
   uploadButtonText: {
     color: '#000',
