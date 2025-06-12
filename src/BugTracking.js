@@ -90,10 +90,7 @@ export const CommentInput = ({
         <View style={{ width: 8 }} />
 
         <TouchableOpacity
-          style={[
-            styles.rightIconContainer,
-            { backgroundColor: buttonColor },
-          ]}
+          style={[styles.rightIconContainer, { backgroundColor: buttonColor }]}
           disabled={loading || disabled}
           onPress={onSubmit}>
           {loading ? (
@@ -251,6 +248,10 @@ const DraggableFab = ({
 };
 
 export const BugTracking = ({ projectID = '', token = '' }) => {
+  if (Platform.OS === 'ios') {
+    throw new Error(`BugTracking is currently not supported on iOS`);
+  }
+
   if (!projectID || !token) {
     throw new Error(
       `Error: Unable to find required prop 'projectID' or 'token' or both.`,
@@ -285,7 +286,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
     setbtmSheetVisible(!btmSheetVisible);
   };
 
-  const onChangeSelectedColor = color => () => {
+  const onChangeSelectedColor = (color) => () => {
     setExpanded(false);
     setTimeout(() => {
       setSelectedColor(color);
@@ -313,7 +314,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
       isCapturing.current = true;
       setWidgetVisible(false);
       setVisible(true);
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise((resolve) => setTimeout(resolve, 500));
       const uri = await captureScreen({
         handleGLSurfaceViewOnAndroid: true,
         quality: 1,
@@ -346,7 +347,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
         selectionLimit: 1,
         quality: 1,
       },
-      response => {
+      (response) => {
         if (response.didCancel) {
           console.log('User cancelled image picker');
         } else if (response.errorCode) {
@@ -408,14 +409,15 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
 
       // Submit in background (async)
       const backgroundSubmit = async () => {
-        const baseURL = `https://us-central1-rally-brucira.cloudfunctions.net/mobile/projects/${projectID}`;
+        // const BASE_URL = `https://us-central1-rally-brucira.cloudfunctions.net/mobile/projects/${projectID}`;
+        const BASE_URL = `https://us-central1-ruttlp.cloudfunctions.net/mobile/projects/${projectID}`;
         const headers = {
           'Content-Type': 'application/json',
           'x-plugin-code': token,
         };
 
         try {
-          const ticketResponse = await fetch(`${baseURL}/tickets`, {
+          const ticketResponse = await fetch(`${BASE_URL}/tickets`, {
             method: 'POST',
             headers,
             body: JSON.stringify(saveData),
@@ -427,7 +429,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
           const ticketID = ticketJson?.id;
 
           const screenshotResponse = await fetch(
-            `${baseURL}/tickets/${ticketID}/screenshot`,
+            `${BASE_URL}/tickets/${ticketID}/screenshot`,
             {
               method: 'POST',
               headers,
@@ -469,7 +471,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
     }
   };
 
-  const onTouchStart = event => {
+  const onTouchStart = (event) => {
     if (event.nativeEvent.touches?.length !== 1) {
       return;
     }
@@ -478,7 +480,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
     setTouch(true);
   };
 
-  const onTouchMove = event => {
+  const onTouchMove = (event) => {
     if (isTouch && event.nativeEvent.touches?.length === 1) {
       const newPath = [...currentPath];
       const { locationX, locationY } = event.nativeEvent;
@@ -511,7 +513,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
       const currentPaths = [...paths];
       const newPath = [...currentPath];
       currentPaths.push({ color: selectedColor, data: newPath });
-      setPaths(prev => [
+      setPaths((prev) => [
         ...prev,
         { color: selectedColor, data: [...currentPath] },
       ]);
@@ -520,10 +522,10 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
     setTouch(false);
   };
 
-  const onUndo = () => setPaths(state => state.slice(0, -1));
-  const toggleOpen = () => setExpanded(state => !state);
+  const onUndo = () => setPaths((state) => state.slice(0, -1));
+  const toggleOpen = () => setExpanded((state) => !state);
 
-  const handleCommentChange = text => {
+  const handleCommentChange = (text) => {
     setComment(text);
     if (error && text?.trim()) {
       setError(false);
@@ -565,7 +567,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
     setWidgetVisible(false);
     setVisible(true);
     setSrc('');
-    await new Promise(resolve => setTimeout(resolve, 200));
+    await new Promise((resolve) => setTimeout(resolve, 200));
     setShowImageUpload(true);
     openImagePicker();
   };
@@ -609,7 +611,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
   }, [src, comment]);
 
   const buttonColor = useMemo(() => {
-    return disabledButton ? "#7B7B7B" : "#6552FF";
+    return disabledButton ? '#7B7B7B' : '#6552FF';
   }, [disabledButton]);
 
   return (
@@ -653,7 +655,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
                     },
                   ]}
                   rippleColor="rgb(255, 251, 254)"
-                  onPress={pageLoaded ? onReset : () => { }}>
+                  onPress={pageLoaded ? onReset : () => {}}>
                   <Text
                     style={{
                       color: theme?.text,
@@ -702,7 +704,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
                           style={{ height: 14, width: 14 }}
                         />
                       </Ripple>
-                      {COLORS.filter(c => c !== selectedColor).map((c, i) => (
+                      {COLORS.filter((c) => c !== selectedColor).map((c, i) => (
                         <Ripple
                           key={i}
                           rippleCentered
