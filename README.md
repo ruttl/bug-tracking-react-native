@@ -5,6 +5,8 @@ Welcome to the official Bug Tracking React Native component provided by [ruttl](
 ## Quick Start Guide
 Ruttl's Bug Tracking React Native component is a re-usable component built around ruttl’s bug tracking ecosystem. Check out our [official website](https://ruttl.com/mobile-app-feedback/) for more in depth information.
 
+To ensure the best experience, our app supports Android versions up to 12.
+
 ### Step 1: Installation
 Under your app's root directory, run
 ```shell
