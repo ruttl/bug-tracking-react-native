@@ -407,10 +407,9 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
         onReset();
       }, 1000);
 
-      // Submit in background (async)
       const backgroundSubmit = async () => {
-        const BASE_URL = `https://us-central1-rally-brucira.cloudfunctions.net/mobile/projects/${projectID}`;
-        // const BASE_URL = `https://us-central1-ruttlp.cloudfunctions.net/mobile/projects/${projectID}`;
+        // const BASE_URL = `https://us-central1-rally-brucira.cloudfunctions.net/mobile/projects/${projectID}`;
+        const BASE_URL = `https://us-central1-ruttlp.cloudfunctions.net/mobile/projects/${projectID}`;
         const headers = {
           'Content-Type': 'application/json',
           'x-plugin-code': token,
