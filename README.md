@@ -5,7 +5,6 @@ Welcome to the official Bug Tracking React Native component provided by [ruttl](
 
 The Bug Tracking React Native component is open source — contributions are welcome!
 
----
 ## ✅ Supported Platforms
 - React Native CLI
 - Expo (SDK 48+)
