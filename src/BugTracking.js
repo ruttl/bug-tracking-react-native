@@ -80,9 +80,9 @@ export const CommentInput = ({
           />
           <TouchableOpacity onPress={toggleBottomNavigationView}>
             <Image
+              resizeMode="cover"
               source={require('./assets/chat-icon.png')}
               style={styles.iconImage}
-              resizeMode="cover"
             />
           </TouchableOpacity>
         </View>
@@ -90,8 +90,8 @@ export const CommentInput = ({
         <View style={{ width: 8 }} />
 
         <TouchableOpacity
-          style={[styles.rightIconContainer, { backgroundColor: buttonColor }]}
           disabled={loading || disabled}
+          style={[styles.rightIconContainer, { backgroundColor: buttonColor }]}
           onPress={onSubmit}>
           {loading ? (
             <ActivityIndicator color="#FFF" style={{ paddingHorizontal: 4 }} />
@@ -367,6 +367,69 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
     );
   };
 
+  const backgroundSubmit = async (imageURI) => {
+    // const BASE_URL = `https://us-central1-rally-brucira.cloudfunctions.net/mobile/projects/${projectID}`;
+    const BASE_URL = `https://us-central1-ruttlp.cloudfunctions.net/mobile/projects/${projectID}`;
+    const headers = {
+      'Content-Type': 'application/json',
+      'x-plugin-code': token,
+    };
+
+    const haveDescription = !!description?.trim();
+    const saveData = {
+      comment,
+      description: haveDescription ? description?.trim() : null,
+      height: SCREEN_HEIGHT,
+      width: SCREEN_WIDTH,
+      osName: Platform.OS,
+    };
+
+    try {
+      const ticketResponse = await fetch(`${BASE_URL}/tickets`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(saveData),
+      });
+
+      if (!ticketResponse.ok) {
+        throw new Error('Failed to create ticket');
+      }
+      const ticketJson = await ticketResponse.json();
+      const ticketID = ticketJson?.id;
+
+      const screenshotResponse = await fetch(
+        `${BASE_URL}/tickets/${ticketID}/screenshot`,
+        {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ image: imageURI }),
+        },
+      );
+
+      if (!screenshotResponse.ok) {
+        throw new Error('Failed to upload screenshot');
+      }
+
+      Toast.show({
+        type: 'success',
+        text1: 'New ticket added successfully.',
+        visibilityTime: 2000,
+        autoHide: true,
+      });
+    } catch (err) {
+      Toast.show({
+        type: 'error',
+        text1: 'Ticket upload failed in background',
+        text2: err.message || 'Unknown error',
+        visibilityTime: 2000,
+        autoHide: true,
+      });
+      setTimeout(() => {
+        onLongPressHandler();
+      }, 2000);
+    }
+  };
+
   const onSubmit = async () => {
     if (!comment.trim()) {
       setError(true);
@@ -392,71 +455,11 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
         width: SCREEN_WIDTH,
       });
 
-      const haveDescription = !!description?.trim();
-      const saveData = {
-        comment,
-        description: haveDescription ? description?.trim() : null,
-        // appVersion: '1.0.0',
-        // device: 'iPhone',
-        height: SCREEN_HEIGHT,
-        width: SCREEN_WIDTH,
-        osName: Platform.OS,
-      };
-
       setTimeout(() => {
         onReset();
       }, 1000);
 
-      const backgroundSubmit = async () => {
-        // const BASE_URL = `https://us-central1-rally-brucira.cloudfunctions.net/mobile/projects/${projectID}`;
-        const BASE_URL = `https://us-central1-ruttlp.cloudfunctions.net/mobile/projects/${projectID}`;
-        const headers = {
-          'Content-Type': 'application/json',
-          'x-plugin-code': token,
-        };
-
-        try {
-          const ticketResponse = await fetch(`${BASE_URL}/tickets`, {
-            method: 'POST',
-            headers,
-            body: JSON.stringify(saveData),
-          });
-
-          if (!ticketResponse.ok) throw new Error('Failed to create ticket');
-
-          const ticketJson = await ticketResponse.json();
-          const ticketID = ticketJson?.id;
-
-          const screenshotResponse = await fetch(
-            `${BASE_URL}/tickets/${ticketID}/screenshot`,
-            {
-              method: 'POST',
-              headers,
-              body: JSON.stringify({ image: uri }),
-            },
-          );
-
-          if (!screenshotResponse.ok)
-            throw new Error('Failed to upload screenshot');
-
-          Toast.show({
-            type: 'success',
-            text1: 'New ticket added successfully.',
-            visibilityTime: 2000,
-            autoHide: true,
-          });
-        } catch (err) {
-          Toast.show({
-            type: 'error',
-            text1: 'Ticket upload failed in background',
-            text2: err.message || 'Unknown error',
-            visibilityTime: 2000,
-            autoHide: true,
-          });
-        }
-      };
-
-      backgroundSubmit();
+      backgroundSubmit(uri);
     } catch (e) {
       console.log('Error before background submit', e);
       Toast.show({
@@ -578,11 +581,11 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
         <Svg height={height} width={width}>
           <Path
             d={currentPath.join('')}
-            stroke={selectedColor}
             fill={'transparent'}
-            strokeWidth={4}
-            strokeLinejoin={'round'}
+            stroke={selectedColor}
             strokeLinecap={'round'}
+            strokeLinejoin={'round'}
+            strokeWidth={4}
           />
           {paths.length > 0 &&
             paths.map(({ color, data }, index) => (
@@ -675,12 +678,12 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
                       style={styles.iconButton}
                       onPress={onUndo}>
                       <Image
-                        source={require('./assets/undo.png')}
                         style={{
                           height: 24,
                           width: 24,
                           transform: [{ rotate: '180deg' }],
                         }}
+                        source={require('./assets/undo.png')}
                       />
                     </Ripple>
                     <RNAnimated.View
@@ -795,6 +798,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
               behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
               style={styles.footerContainer}>
               <CommentInput
+                buttonColor={buttonColor}
                 comment={comment}
                 disabled={disabledButton}
                 error={error}
@@ -803,7 +807,6 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
                 theme={theme}
                 toggleBottomNavigationView={toggleBottomNavigationView}
                 onSubmit={onSubmit}
-                buttonColor={buttonColor}
               />
               <BottomSheet
                 animationType="slide"
