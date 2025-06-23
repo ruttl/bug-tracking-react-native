@@ -24,6 +24,7 @@ import { BottomSheet } from 'react-native-btr';
 import { PanGestureHandler } from 'react-native-gesture-handler';
 import { launchImageLibrary } from 'react-native-image-picker';
 import Ripple from 'react-native-material-ripple';
+import DeviceInfo from 'react-native-device-info';
 import Animated, {
   runOnJS,
   useAnimatedGestureHandler,
@@ -380,6 +381,18 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
       'x-plugin-code': token,
     };
 
+    const packageName = DeviceInfo.getBundleId();
+    if (!packageName) {
+      Toast.show({
+        type: 'error',
+        text1: 'Application identifier not found',
+        text2: 'Please ensure the app is configured correctly.',
+        visibilityTime: 2000,
+        autoHide: true,
+      });
+      return;
+    }
+
     const haveDescription = !!description?.trim();
     const saveData = {
       comment,
@@ -387,6 +400,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
       height: SCREEN_HEIGHT,
       width: SCREEN_WIDTH,
       osName: Platform.OS,
+      // appId : packageName,
     };
 
     try {
@@ -422,6 +436,9 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
         autoHide: true,
       });
     } catch (err) {
+      setTimeout(() => {
+        onLongPressHandler();
+      }, 2000);
       Toast.show({
         type: 'error',
         text1: 'Ticket upload failed in background',
@@ -429,9 +446,6 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
         visibilityTime: 2000,
         autoHide: true,
       });
-      setTimeout(() => {
-        onLongPressHandler();
-      }, 2000);
     }
   };
 
