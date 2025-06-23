@@ -232,6 +232,7 @@ const DraggableFab = ({
                   <Image
                     source={require('./assets/plus.png')}
                     style={styles.uploadIcon}
+                    resizeMode="contain"
                   />
                   <Text style={styles.uploadText}>Upload Image</Text>
                 </TouchableOpacity>
@@ -1200,7 +1201,6 @@ const styles = StyleSheet.create({
   uploadIcon: {
     width: 16,
     height: 16,
-    resizeMode: 'contain',
   },
   uploadText: {
     fontSize: 14,
