@@ -83,7 +83,7 @@ export const CommentInput = ({
           <TouchableOpacity
             onPress={toggleBottomNavigationView}
             // id="open-sheet-button"
-            >
+          >
             <Image
               resizeMode="cover"
               source={require('./assets/chat-icon.png')}
@@ -99,7 +99,7 @@ export const CommentInput = ({
           style={[styles.rightIconContainer, { backgroundColor: buttonColor }]}
           onPress={onSubmit}
           // id="add-comment-button"
-          >
+        >
           {loading ? (
             <ActivityIndicator color="#FFF" style={{ paddingHorizontal: 4 }} />
           ) : (
@@ -190,6 +190,10 @@ const DraggableFab = ({
     };
   }, [showUploadOption]);
 
+  useEffect(() => {
+    Image.resolveAssetSource(require('./assets/plus.png'));
+  }, []);
+
   return (
     <>
       {showUploadOption && (
@@ -226,13 +230,10 @@ const DraggableFab = ({
                   onPress={() => {
                     setShowUploadOption(false);
                     handleLongPress?.();
-                  }}
-                  // id="screen-upload-button"
-                  >
+                  }}>
                   <Image
                     source={require('./assets/plus.png')}
                     style={styles.uploadIcon}
-                    resizeMode="contain"
                   />
                   <Text style={styles.uploadText}>Upload Image</Text>
                 </TouchableOpacity>
@@ -682,7 +683,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
                   rippleColor="rgb(255, 251, 254)"
                   onPress={pageLoaded ? onReset : () => {}}
                   // id={'close-button'}
-                  >
+                >
                   <Text
                     style={{
                       color: theme?.text,
@@ -703,7 +704,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
                       style={styles.iconButton}
                       onPress={onUndo}
                       // id={'undo-button'}
-                      >
+                    >
                       <Image
                         style={{
                           height: 24,
@@ -729,7 +730,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
                         rippleOpacity={0.12}
                         onPress={toggleOpen}
                         // id={'selected-color-picker-button'}
-                        >
+                      >
                         <Image
                           source={require('./assets/edit_color.png')}
                           style={{ height: 14, width: 14 }}
@@ -800,7 +801,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
                             style={styles.uploadButtonShow}
                             onPress={openImagePicker}
                             // id="upload-image-button"
-                            >
+                          >
                             <Image
                               source={require('./assets/plus.png')}
                               style={{ height: 24, width: 24 }}
