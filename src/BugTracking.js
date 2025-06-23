@@ -77,8 +77,11 @@ export const CommentInput = ({
             style={[styles.singleTextInput, { color: theme?.text || '#000' }]}
             value={comment}
             onChangeText={handleCommentChange}
+            id="comment-input"
           />
-          <TouchableOpacity onPress={toggleBottomNavigationView}>
+          <TouchableOpacity
+            onPress={toggleBottomNavigationView}
+            id="open-sheet-button">
             <Image
               resizeMode="cover"
               source={require('./assets/chat-icon.png')}
@@ -92,7 +95,8 @@ export const CommentInput = ({
         <TouchableOpacity
           disabled={loading || disabled}
           style={[styles.rightIconContainer, { backgroundColor: buttonColor }]}
-          onPress={onSubmit}>
+          onPress={onSubmit}
+          id="add-comment-button">
           {loading ? (
             <ActivityIndicator color="#FFF" style={{ paddingHorizontal: 4 }} />
           ) : (
@@ -219,7 +223,8 @@ const DraggableFab = ({
                   onPress={() => {
                     setShowUploadOption(false);
                     handleLongPress?.();
-                  }}>
+                  }}
+                  id="screen-upload-button">
                   <Image
                     source={require('./assets/plus.png')}
                     style={styles.uploadIcon}
@@ -657,7 +662,8 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
                     },
                   ]}
                   rippleColor="rgb(255, 251, 254)"
-                  onPress={pageLoaded ? onReset : () => {}}>
+                  onPress={pageLoaded ? onReset : () => {}}
+                  id={'close-button'}>
                   <Text
                     style={{
                       color: theme?.text,
@@ -676,7 +682,8 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
                       rippleCentered
                       rippleColor="rgb(255, 251, 254)"
                       style={styles.iconButton}
-                      onPress={onUndo}>
+                      onPress={onUndo}
+                      id={'undo-button'}>
                       <Image
                         style={{
                           height: 24,
@@ -700,7 +707,8 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
                           },
                         ]}
                         rippleOpacity={0.12}
-                        onPress={toggleOpen}>
+                        onPress={toggleOpen}
+                        id={'selected-color-picker-button'}>
                         <Image
                           source={require('./assets/edit_color.png')}
                           style={{ height: 14, width: 14 }}
@@ -720,6 +728,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
                           ]}
                           rippleOpacity={0.12}
                           onPress={onChangeSelectedColor(c)}
+                          id={`color-picker-button-${i + 1}`}
                         />
                       ))}
                     </RNAnimated.View>
@@ -768,7 +777,8 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
                           </Text>
                           <TouchableOpacity
                             style={styles.uploadButtonShow}
-                            onPress={openImagePicker}>
+                            onPress={openImagePicker}
+                            id="upload-image-button">
                             <Image
                               source={require('./assets/plus.png')}
                               style={{ height: 24, width: 24 }}
@@ -826,6 +836,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
                     placeholderTextColor="#16064780"
                     value={comment}
                     onChangeText={handleCommentChange}
+                    id="comment-title-input"
                   />
                   {error && (
                     <View style={{ width: '100%' }}>
@@ -851,12 +862,14 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
                     placeholderTextColor="#16064780"
                     value={description}
                     onChangeText={setDescription}
+                    id="comment-description-input"
                   />
                   <TouchableOpacity
                     style={[
                       styles.bottomSheetButtonContainer,
                       { backgroundColor: buttonColor },
                     ]}
+                    id="submit-button"
                     disabled={loading || disabledButton}
                     onPress={onSubmit}>
                     <Text style={styles.submitButtonText}>{buttonText}</Text>
