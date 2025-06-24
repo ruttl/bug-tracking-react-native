@@ -383,9 +383,12 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
   const backgroundSubmit = async (imageURI) => {
     // const BASE_URL = `https://us-central1-rally-brucira.cloudfunctions.net/mobile/projects/${projectID}`;
     const BASE_URL = `https://us-central1-ruttlp.cloudfunctions.net/mobile/projects/${projectID}`;
+    // const BASE_URL = `https://9290-2405-201-e-320e-2d2f-83ae-4fe7-897a.ngrok-free.app/ruttlp/us-central1/mobile/projects/${projectID}`;
+
     const headers = {
       'Content-Type': 'application/json',
       'x-plugin-code': token,
+      // "ngrok-skip-browser-warning": true,
     };
 
     const packageName = DeviceInfo.getBundleId();
