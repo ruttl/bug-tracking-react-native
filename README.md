@@ -1,7 +1,7 @@
 
-# Ruttl Bug Tracking React Native SDK
+## Introduction
 
-Welcome to the official Bug Tracking React Native component provided by [ruttl](https://ruttl.com/mobile-app-feedback/). This component allows you to seamlessly capture visual bugs in your mobile apps and annotate them with ease.
+Welcome to the official Bug Tracking React Native component provided by [ruttl](https://ruttl.com). This component allows you to seamlessly capture visual bugs in your mobile apps and annotate them with ease.
 
 The Bug Tracking React Native component is open source — contributions are welcome!
 
@@ -66,6 +66,7 @@ yarn add react-native-reanimated
 yarn add react-native-view-shot 
 yarn add react-native-svg 
 yarn add react-native-image-picker
+yarn add react-native-device-info
 ```
 
 
@@ -117,6 +118,7 @@ yarn add react-native-image-picker
 yarn add react-native-safe-area-context
 yarn add react-native-screens
 yarn add react-native-btr
+yarn add react-native-device-info
 ```
 
 ---
