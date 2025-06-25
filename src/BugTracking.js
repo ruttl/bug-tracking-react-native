@@ -83,8 +83,7 @@ export const CommentInput = ({
           <TouchableOpacity
             disabled={loading}
             onPress={toggleBottomNavigationView}
-            id="open-sheet-button"
-          >
+            id="open-sheet-button">
             <Image
               resizeMode="cover"
               source={require('./assets/chat-icon.png')}
@@ -99,8 +98,7 @@ export const CommentInput = ({
           disabled={loading || disabled}
           style={[styles.rightIconContainer, { backgroundColor: buttonColor }]}
           onPress={onSubmit}
-          id="add-comment-button"
-        >
+          id="add-comment-button">
           {loading ? (
             <ActivityIndicator color="#FFF" style={{ paddingHorizontal: 4 }} />
           ) : (
@@ -484,6 +482,18 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
         width: SCREEN_WIDTH,
       });
 
+      if (!uri || !uri.startsWith('data:image/')) {
+        Toast.show({
+          position: 'top',
+          type: 'error',
+          text1: 'Data-URI not found or invalid format',
+          text2: `URI : ${uri}`,
+          visibilityTime: 3000,
+          autoHide: true,
+        });
+        return;
+      }
+
       setTimeout(() => {
         onReset();
       }, 1000);
@@ -687,9 +697,8 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
                   ]}
                   disabled={loading}
                   rippleColor="rgb(255, 251, 254)"
-                  onPress={pageLoaded ? onReset : () => {}}
-                  id={'close-button'}
-                >
+                  onPress={pageLoaded ? onReset : () => { }}
+                  id={'close-button'}>
                   <Text
                     style={{
                       color: theme?.text,
@@ -710,8 +719,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
                       rippleColor="rgb(255, 251, 254)"
                       style={styles.iconButton}
                       onPress={onUndo}
-                      id={'undo-button'}
-                    >
+                      id={'undo-button'}>
                       <Image
                         style={{
                           height: 24,
@@ -737,8 +745,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
                         disabled={loading}
                         rippleOpacity={0.12}
                         onPress={toggleOpen}
-                        id={'selected-color-picker-button'}
-                      >
+                        id={'selected-color-picker-button'}>
                         <Image
                           source={require('./assets/edit_color.png')}
                           style={{ height: 14, width: 14 }}
@@ -809,8 +816,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
                           <TouchableOpacity
                             style={styles.uploadButtonShow}
                             onPress={openImagePicker}
-                            id="upload-image-button"
-                          >
+                            id="upload-image-button">
                             <Image
                               source={require('./assets/plus.png')}
                               style={{ height: 24, width: 24 }}
