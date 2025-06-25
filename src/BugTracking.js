@@ -380,8 +380,8 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
 
   const backgroundSubmit = async (imageURI) => {
     // const BASE_URL = `https://us-central1-rally-brucira.cloudfunctions.net/mobile/projects/${projectID}`;
-    const BASE_URL = `https://us-central1-ruttlp.cloudfunctions.net/mobile/projects/${projectID}`;
-    // const BASE_URL = `https://9290-2405-201-e-320e-2d2f-83ae-4fe7-897a.ngrok-free.app/ruttlp/us-central1/mobile/projects/${projectID}`;
+    // const BASE_URL = `https://us-central1-ruttlp.cloudfunctions.net/mobile/projects/${projectID}`;
+    const BASE_URL = `https://dac8-2401-4900-8815-6ef4-3c4a-b1ce-365c-aa46.ngrok-free.app/ruttlp/us-central1/mobile/projects/${projectID}`;
 
     const headers = {
       'Content-Type': 'application/json',
@@ -424,29 +424,31 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
       const ticketJson = await ticketResponse.json();
       const ticketID = ticketJson?.id;
 
-      const screenshotResponse = await fetch(
-        `${BASE_URL}/tickets/${ticketID}/screenshot`,
-        {
-          method: 'POST',
-          headers,
-          body: JSON.stringify({ image: imageURI }),
-        },
-      );
+      if (checkIsDataURI(imageURI)) {
+        const screenshotResponse = await fetch(
+          `${BASE_URL}/tickets/${ticketID}/screenshot`,
+          {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({ image: imageURI }),
+          },
+        );
 
-      if (!screenshotResponse.ok) {
-        throw new Error('Failed to upload screenshot');
+        if (!screenshotResponse.ok) {
+          throw new Error('Failed to upload screenshot');
+        }
+
+        Toast.show({
+          type: 'success',
+          text1: 'New ticket added successfully.',
+          visibilityTime: 2000,
+          autoHide: true,
+        });
       }
-
-      Toast.show({
-        type: 'success',
-        text1: 'New ticket added successfully.',
-        visibilityTime: 2000,
-        autoHide: true,
-      });
     } catch (err) {
       setTimeout(() => {
         onLongPressHandler();
-      }, 2000);
+      }, 1000);
       Toast.show({
         type: 'error',
         text1: 'Ticket upload failed in background',
@@ -482,25 +484,14 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
         width: SCREEN_WIDTH,
       });
 
-      if (!uri || !uri.startsWith('data:image/')) {
-        Toast.show({
-          position: 'top',
-          type: 'error',
-          text1: 'Data-URI not found or invalid format',
-          text2: `URI : ${uri}`,
-          visibilityTime: 3000,
-          autoHide: true,
-        });
-        return;
-      }
-
       setTimeout(() => {
         onReset();
       }, 1000);
 
-      backgroundSubmit(uri);
+      if (checkIsDataURI(uri)) {
+        backgroundSubmit(uri);
+      }
     } catch (e) {
-      console.log('Error before background submit', e);
       Toast.show({
         position: 'top',
         type: 'error',
@@ -509,7 +500,29 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
         visibilityTime: 3000,
         autoHide: true,
       });
+      setTimeout(() => {
+        onLongPressHandler();
+      }, 2000);
     }
+  };
+
+  const checkIsDataURI = (uri) => {
+    const isValid =
+      uri && typeof uri === 'string' && uri.startsWith('data:image/');
+
+    if (!isValid) {
+      Toast.show({
+        position: 'top',
+        type: 'error',
+        text1: 'Data-URI not found or invalid format',
+        text2: `URI: ${uri}`,
+        visibilityTime: 30000,
+        autoHide: true,
+      });
+      return false;
+    }
+
+    return isValid;
   };
 
   const onTouchStart = (event) => {
