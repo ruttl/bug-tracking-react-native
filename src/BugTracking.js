@@ -53,6 +53,10 @@ const width = height * ASPECT_RATIO;
 const ERROR_MESSAGE_TITLE = 'Failed to capture this snapshot!';
 const ERROR_MESSAGE_DESCRIPTION = 'Please try again later.';
 
+const PREVIEW_URL = `https://us-central1-rally-brucira.cloudfunctions.net`;
+const NGROK = `https://dac8-2401-4900-8815-6ef4-3c4a-b1ce-365c-aa46.ngrok-free.app/ruttlp/us-central1`;
+const PRODUCTION_URL = `https://us-central1-ruttlp.cloudfunctions.net`;
+
 export const CommentInput = ({
   comment,
   toggleBottomNavigationView,
@@ -379,9 +383,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
   };
 
   const backgroundSubmit = async (imageURI) => {
-    // const BASE_URL = `https://us-central1-rally-brucira.cloudfunctions.net/mobile/projects/${projectID}`;
-    // const BASE_URL = `https://us-central1-ruttlp.cloudfunctions.net/mobile/projects/${projectID}`;
-    const BASE_URL = `https://dac8-2401-4900-8815-6ef4-3c4a-b1ce-365c-aa46.ngrok-free.app/ruttlp/us-central1/mobile/projects/${projectID}`;
+    const BASE_URL = `${PRODUCTION_URL}/mobile/projects/${projectID}`;
 
     const headers = {
       'Content-Type': 'application/json',
@@ -710,7 +712,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
                   ]}
                   disabled={loading}
                   rippleColor="rgb(255, 251, 254)"
-                  onPress={pageLoaded ? onReset : () => { }}
+                  onPress={pageLoaded ? onReset : () => {}}
                   id={'close-button'}>
                   <Text
                     style={{
