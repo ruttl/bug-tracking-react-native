@@ -53,6 +53,8 @@ const width = height * ASPECT_RATIO;
 const ERROR_MESSAGE_TITLE = 'Failed to capture this snapshot!';
 const ERROR_MESSAGE_DESCRIPTION = 'Please try again later.';
 
+const MAX_MB = 10 * 1024 * 1024;
+
 const PREVIEW_URL = `https://us-central1-rally-brucira.cloudfunctions.net`;
 const NGROK = `https://dac8-2401-4900-8815-6ef4-3c4a-b1ce-365c-aa46.ngrok-free.app/ruttlp/us-central1`;
 const PRODUCTION_URL = `https://us-central1-ruttlp.cloudfunctions.net`;
@@ -369,14 +371,20 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
           console.error('ImagePicker Error:', response.errorMessage);
         } else {
           const asset = response.assets?.[0];
-          if (asset?.uri) {
-            setShowImageUpload(false);
-            setTimeout(() => {
-              setSrc(asset.uri);
-            }, 1200);
-          } else {
+          if (!asset?.uri) {
             console.warn('No image URI returned');
+            return;
           }
+
+          if (asset.fileSize && asset.fileSize > MAX_MB) {
+            alert('Unable to upload. Maximum allowed image size is 10MB.');
+            return;
+          }
+
+          setShowImageUpload(false);
+          setTimeout(() => {
+            setSrc(asset.uri);
+          }, 1200);
         }
       },
     );
