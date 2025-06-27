@@ -56,7 +56,7 @@ const ERROR_MESSAGE_DESCRIPTION = 'Please try again later.';
 const MAX_MB = 10 * 1024 * 1024;
 
 const PREVIEW_URL = `https://us-central1-rally-brucira.cloudfunctions.net`;
-const NGROK = `https://dac8-2401-4900-8815-6ef4-3c4a-b1ce-365c-aa46.ngrok-free.app/ruttlp/us-central1`;
+const NGROK = `https://3c89-2401-4900-8817-1fea-e454-c83e-45c8-4a00.ngrok-free.app/ruttlp/us-central1`;
 const PRODUCTION_URL = `https://us-central1-ruttlp.cloudfunctions.net`;
 
 export const CommentInput = ({
@@ -391,7 +391,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
   };
 
   const backgroundSubmit = async (imageURI) => {
-    const BASE_URL = `${PRODUCTION_URL}/mobile/projects/${projectID}`;
+    const BASE_URL = `${NGROK}/mobile/projects/${projectID}`;
 
     const headers = {
       'Content-Type': 'application/json',
