@@ -1,6 +1,6 @@
 {
   "name": "@ruttl/bug-tracking",
-  "version": "1.1.17",
+  "version": "1.1.22",
   "description": "React Native plugin for bug tracking via Ruttl",
   "main": "lib/commonjs/index.js",
   "module": "lib/module/index.js",
@@ -18,7 +18,7 @@
   },
   "keywords": [
     "ruttl",
-    "bug trakcing"
+    "bug tracking"
   ],
   "repository": "https://github.com/ruttl/bug-tracking-react-native.git",
   "bugs": "https://github.com/ruttl/bug-tracking-react-native/issues",
@@ -44,30 +44,31 @@
     ]
   },
   "devDependencies": {
-    "prettier": "^2.8.8",
+    "prettier": "^3.2.5",
     "react": "^18.2.0",
-    "react-native": "^0.71.7",
+    "react-native": "^0.74.2",
     "react-native-builder-bob": "^0.20.4",
     "rimraf": "^5.0.10"
   },
   "peerDependencies": {
     "react": ">=18.0.0",
     "react-native": ">=0.71.0",
-    "react-native-btr": "^2.2.1",
-    "react-native-builder-bob": "^0.20.4",
-    "react-native-gesture-handler": "^2.25.0",
-    "react-native-reanimated": "^3.17.5",
-    "react-native-svg": "^13.9.0",
-    "react-native-view-shot": "^3.6.0"
+    "react-native-btr": "^2.3.0",
+    "react-native-gesture-handler": "^2.14.1",
+    "react-native-reanimated": "^3.20.1",
+    "react-native-svg": "^15.13.0",
+    "react-native-view-shot": "^4.0.4",
+    "react-native-device-info": "^14.0.4",
+    "react-native-draggable": "^3.4.0",
+    "react-native-image-picker": "^9.0.0",
+    "react-native-material-ripple": "^0.9.1",
+    "react-native-safe-area-context": "^5.5.2",
+    "react-native-screens": "^4.18.1"
   },
   "dependencies": {
-    "axios": "^1.4.0",
+    "axios": "^1.6.8",
     "prop-types": "^15.8.1",
-    "react-native-btr": "^2.2.1",
-    "react-native-device-info": "^14.0.4",
-    "react-native-draggable": "^3.3.0",
-    "react-native-material-ripple": "^0.9.1",
-    "react-native-toast-message": "^2.1.6"
+    "react-native-toast-message": "^2.2.0"
   },
   "eslintIgnore": [
     "node_modules/",
