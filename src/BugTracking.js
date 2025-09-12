@@ -391,7 +391,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
   };
 
   const backgroundSubmit = async (imageURI) => {
-    const BASE_URL = `${NGROK}/mobile/projects/${projectID}`;
+    const BASE_URL = `${PREVIEW_URL}/mobile/projects/${projectID}`;
 
     const headers = {
       'Content-Type': 'application/json',
