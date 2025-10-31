@@ -1,5 +1,6 @@
-import PropTypes from 'prop-types';
 import React, { Fragment, useEffect, useMemo, useRef, useState } from 'react';
+import Constants from 'expo-constants';
+import PropTypes from 'prop-types';
 import {
   ActivityIndicator,
   Animated as RNAnimated,
@@ -55,11 +56,14 @@ const ERROR_MESSAGE_DESCRIPTION = 'Please try again later.';
 
 const MAX_MB = 10 * 1024 * 1024;
 
-const PREVIEW_URL = `https://us-central1-rally-brucira.cloudfunctions.net`;
+const IS_PREVIEW = false;
+let BUILD_NUMBER = '1';
 const NGROK = `https://3c89-2401-4900-8817-1fea-e454-c83e-45c8-4a00.ngrok-free.app/ruttlp/us-central1`;
+const PREVIEW_URL = `https://us-central1-rally-brucira.cloudfunctions.net`;
 const PRODUCTION_URL = `https://us-central1-ruttlp.cloudfunctions.net`;
+const BASE_URL = IS_PREVIEW ? PREVIEW_URL : PRODUCTION_URL + `/mobile/projects`;
 
-export const CommentInput = ({
+const CommentInput = ({
   comment,
   toggleBottomNavigationView,
   loading,
@@ -126,12 +130,13 @@ const DraggableFab = ({
   onDragEnd,
   initialX,
   initialY,
-  handleLongPress,
+  manuallyUpload,
+  startRecordingCapture,
   throttleMs = 800,
 }) => {
   const x = useSharedValue(initialX);
   const y = useSharedValue(initialY);
-  const [showUploadOption, setShowUploadOption] = useState(false);
+  const [showOption, setShowOption] = useState(false);
   const tapBlocked = useRef(false);
 
   const handlePress = () => {
@@ -184,7 +189,7 @@ const DraggableFab = ({
       flexDirection: isLeft ? 'row' : 'row-reverse',
       alignItems: 'center',
     };
-  }, [showUploadOption]);
+  }, [showOption]);
 
   const uploadButtonStyle = useAnimatedStyle(() => {
     const isTop = y.value < SCREEN_HEIGHT / 2;
@@ -193,7 +198,7 @@ const DraggableFab = ({
       position: 'absolute',
       top: isTop ? BUTTON_SIZE : -BUTTON_SIZE + 16,
     };
-  }, [showUploadOption]);
+  }, [showOption]);
 
   useEffect(() => {
     Image.resolveAssetSource(require('./assets/plus.png'));
@@ -201,8 +206,8 @@ const DraggableFab = ({
 
   return (
     <>
-      {showUploadOption && (
-        <TouchableWithoutFeedback onPress={() => setShowUploadOption(false)}>
+      {showOption && (
+        <TouchableWithoutFeedback onPress={() => setShowOption(false)}>
           <View
             style={{
               position: 'absolute',
@@ -228,15 +233,15 @@ const DraggableFab = ({
             fabStyle,
           ]}>
           <Animated.View style={directionStyle}>
-            {showUploadOption && (
+            {showOption && (
               <Animated.View style={uploadButtonStyle}>
                 <TouchableOpacity
                   style={styles.uploadButton}
                   onPress={() => {
-                    setShowUploadOption(false);
-                    handleLongPress?.();
+                    setShowOption(false);
+                    manuallyUpload?.();
                   }}
-                  id='screen-upload-button'>
+                  id="screen-upload-button">
                   <Image
                     source={require('./assets/plus.png')}
                     style={styles.uploadIcon}
@@ -250,7 +255,7 @@ const DraggableFab = ({
               activeOpacity={0.7}
               delayPressOut={300}
               style={styles.buttonContainer}
-              onLongPress={() => setShowUploadOption(true)}
+              onLongPress={() => setShowOption(true)}
               onPress={handlePress}>
               <Image
                 source={require('./assets/ruttl.png')}
@@ -390,13 +395,30 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
     );
   };
 
+  const getBuildNumber = () => {
+    try {
+      const expoConfig = Constants?.expoConfig;
+      if (expoConfig) {
+        if (Platform.OS === 'android' && expoConfig?.android?.versionCode) {
+          return String(expoConfig?.android?.versionCode);
+        } else if (Platform.OS === 'ios' && expoConfig?.ios?.buildNumber) {
+          return String(expoConfig?.ios?.buildNumber);
+        }
+      }
+
+      return String(DeviceInfo.getBuildNumber() ?? BUILD_NUMBER);
+    } catch (err) {
+      console.warn('⚠️ Failed to get build number:', err.message);
+      return String(DeviceInfo.getBuildNumber() ?? BUILD_NUMBER);
+    }
+  };
+
   const backgroundSubmit = async (imageURI) => {
-    const BASE_URL = `${PREVIEW_URL}/mobile/projects/${projectID}`;
+    const API_URL = `${BASE_URL}/${projectID}`;
 
     const headers = {
       'Content-Type': 'application/json',
       'x-plugin-code': token,
-      // "ngrok-skip-browser-warning": true,
     };
 
     const packageName = DeviceInfo.getBundleId();
@@ -412,17 +434,21 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
     }
 
     const haveDescription = !!description?.trim();
+    const buildNumber = getBuildNumber();
+
     const saveData = {
       comment,
       description: haveDescription ? description?.trim() : null,
       height: SCREEN_HEIGHT,
       width: SCREEN_WIDTH,
       osName: Platform.OS,
-      // appId : packageName,
+      appId: packageName,
+      buildNumber: Number(buildNumber),
+      highlightedCoords: highlightedCoords,
     };
 
     try {
-      const ticketResponse = await fetch(`${BASE_URL}/tickets`, {
+      const ticketResponse = await fetch(`${API_URL}/tickets`, {
         method: 'POST',
         headers,
         body: JSON.stringify(saveData),
@@ -436,7 +462,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
 
       if (checkIsDataURI(imageURI)) {
         const screenshotResponse = await fetch(
-          `${BASE_URL}/tickets/${ticketID}/screenshot`,
+          `${API_URL}/tickets/${ticketID}/screenshot`,
           {
             method: 'POST',
             headers,
@@ -457,7 +483,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
       }
     } catch (err) {
       setTimeout(() => {
-        onLongPressHandler();
+        manuallyUpload();
       }, 1000);
       Toast.show({
         type: 'error',
@@ -511,7 +537,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
         autoHide: true,
       });
       setTimeout(() => {
-        onLongPressHandler();
+        manuallyUpload();
       }, 2000);
     }
   };
@@ -596,7 +622,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
     }
   };
 
-  const onLongPressHandler = async () => {
+  const manuallyUpload = async () => {
     setWidgetVisible(false);
     setVisible(true);
     setSrc('');
@@ -605,7 +631,11 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
     openImagePicker();
   };
 
-  const randerSVG = () => {
+  const onPressStartRecording = () => {
+    console.log('start recording capture pressed');
+  };
+
+  const renderSVG = () => {
     if (!src) return null;
     return (
       <ImageBackground ref={viewRef} resizeMode="contain" source={{ uri: src }}>
@@ -678,17 +708,76 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
     return disabledButton ? '#7B7B7B' : '#6552FF';
   }, [disabledButton]);
 
+  const highlightedCoords = useMemo(() => {
+    let minX = SCREEN_WIDTH;
+    let minY = SCREEN_HEIGHT;
+    let maxX = 0;
+    let maxY = 0;
+    let foundPoints = false;
+
+    const allPaths = [
+      ...paths,
+      ...(currentPath.length > 0 ? [{ data: currentPath }] : []),
+    ];
+
+    if (allPaths.length === 0) {
+      return null;
+    }
+
+    for (const pathObj of allPaths) {
+      for (const pointString of pathObj.data) {
+        const cleanString = pointString.trim().replace('M', '');
+        if (!cleanString) continue;
+
+        const [xStr, yStr] = cleanString.split(',');
+        const x = parseFloat(xStr);
+        const y = parseFloat(yStr);
+
+        if (!isNaN(x) && !isNaN(y)) {
+          minX = Math.min(minX, x);
+          minY = Math.min(minY, y);
+          maxX = Math.max(maxX, x);
+          maxY = Math.max(maxY, y);
+          foundPoints = true;
+        }
+      }
+    }
+
+    if (!foundPoints) {
+      return null;
+    }
+
+    const padding = 5;
+
+    const normalizedMinX = Math.max(0, minX - padding);
+    const normalizedMinY = Math.max(0, minY - padding);
+    const normalizedMaxX = Math.min(width, maxX + padding);
+    const normalizedMaxY = Math.min(height, maxY + padding);
+
+    if (normalizedMaxX > normalizedMinX && normalizedMaxY > normalizedMinY) {
+      return {
+        tlX: normalizedMinX,
+        tlY: normalizedMinY,
+        brX: normalizedMaxX,
+        brY: normalizedMaxY,
+      };
+    }
+
+    return null;
+  }, [paths, currentPath, width, height]);
+
   return (
     <View style={{ zIndex: 999 }}>
       <Fragment>
         {widgetVisible && !src ? (
           <DraggableFab
-            handleLongPress={onLongPressHandler}
             initialX={fabPos.x}
             initialY={fabPos.y}
             throttleMs={1000}
             onDragEnd={setFabPos}
             onPress={onScreenCapture}
+            manuallyUpload={manuallyUpload}
+            startRecordingCapture={onPressStartRecording}
           />
         ) : (
           <StatusBar backgroundColor={'#000'}></StatusBar>
@@ -815,14 +904,14 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
                           onTouchEnd={onTouchEnd}
                           onTouchMove={onTouchMove}
                           onTouchStart={onTouchStart}>
-                          {randerSVG()}
+                          {renderSVG()}
                         </View>
 
                         <View
                           ref={exportRef}
                           pointerEvents="none"
                           style={styles.svgContainerHidden}>
-                          {randerSVG()}
+                          {renderSVG()}
                         </View>
                       </>
                     )}
