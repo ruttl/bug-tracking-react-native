@@ -1,3 +1,1 @@
-import BugTracking from './BugTracking';
-
-export default BugTracking;
+export { default as BugTracking } from './BugTracking';
