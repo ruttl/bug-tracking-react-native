@@ -1,0 +1,2 @@
+expo.modules.mymodule
+drawable ruttl

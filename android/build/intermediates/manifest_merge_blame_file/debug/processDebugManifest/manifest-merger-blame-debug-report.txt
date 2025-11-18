@@ -1,0 +1,21 @@
+1<?xml version="1.0" encoding="utf-8"?>
+2<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+3    package="expo.modules.mymodule" >
+4
+5    <uses-sdk android:minSdkVersion="24" />
+6
+7    <application>
+7-->/Users/devam/Documents/Brucira/Projects/hyperlocal-monorepo/apps/user-app/modules/my-module/android/src/main/AndroidManifest.xml:2:3-8:17
+8        <service
+8-->/Users/devam/Documents/Brucira/Projects/hyperlocal-monorepo/apps/user-app/modules/my-module/android/src/main/AndroidManifest.xml:3:5-7:85
+9            android:name="expo.modules.mymodule.ScreenRecordService"
+9-->/Users/devam/Documents/Brucira/Projects/hyperlocal-monorepo/apps/user-app/modules/my-module/android/src/main/AndroidManifest.xml:4:7-42
+10            android:exported="false"
+10-->/Users/devam/Documents/Brucira/Projects/hyperlocal-monorepo/apps/user-app/modules/my-module/android/src/main/AndroidManifest.xml:5:7-31
+11            android:foregroundServiceType="mediaProjection"
+11-->/Users/devam/Documents/Brucira/Projects/hyperlocal-monorepo/apps/user-app/modules/my-module/android/src/main/AndroidManifest.xml:6:7-54
+12            android:permission="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
+12-->/Users/devam/Documents/Brucira/Projects/hyperlocal-monorepo/apps/user-app/modules/my-module/android/src/main/AndroidManifest.xml:7:7-82
+13    </application>
+14
+15</manifest>

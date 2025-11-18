@@ -1,0 +1,28 @@
+-- Merging decision tree log ---
+manifest
+ADDED from /Users/devam/Documents/Brucira/Projects/hyperlocal-monorepo/apps/user-app/modules/my-module/android/src/main/AndroidManifest.xml:1:1-9:12
+INJECTED from /Users/devam/Documents/Brucira/Projects/hyperlocal-monorepo/apps/user-app/modules/my-module/android/src/main/AndroidManifest.xml:1:1-9:12
+	package
+		INJECTED from /Users/devam/Documents/Brucira/Projects/hyperlocal-monorepo/apps/user-app/modules/my-module/android/src/main/AndroidManifest.xml
+	xmlns:android
+		ADDED from /Users/devam/Documents/Brucira/Projects/hyperlocal-monorepo/apps/user-app/modules/my-module/android/src/main/AndroidManifest.xml:1:11-69
+application
+ADDED from /Users/devam/Documents/Brucira/Projects/hyperlocal-monorepo/apps/user-app/modules/my-module/android/src/main/AndroidManifest.xml:2:3-8:17
+service#expo.modules.mymodule.ScreenRecordService
+ADDED from /Users/devam/Documents/Brucira/Projects/hyperlocal-monorepo/apps/user-app/modules/my-module/android/src/main/AndroidManifest.xml:3:5-7:85
+	android:exported
+		ADDED from /Users/devam/Documents/Brucira/Projects/hyperlocal-monorepo/apps/user-app/modules/my-module/android/src/main/AndroidManifest.xml:5:7-31
+	android:permission
+		ADDED from /Users/devam/Documents/Brucira/Projects/hyperlocal-monorepo/apps/user-app/modules/my-module/android/src/main/AndroidManifest.xml:7:7-82
+	android:foregroundServiceType
+		ADDED from /Users/devam/Documents/Brucira/Projects/hyperlocal-monorepo/apps/user-app/modules/my-module/android/src/main/AndroidManifest.xml:6:7-54
+	android:name
+		ADDED from /Users/devam/Documents/Brucira/Projects/hyperlocal-monorepo/apps/user-app/modules/my-module/android/src/main/AndroidManifest.xml:4:7-42
+uses-sdk
+INJECTED from /Users/devam/Documents/Brucira/Projects/hyperlocal-monorepo/apps/user-app/modules/my-module/android/src/main/AndroidManifest.xml reason: use-sdk injection requested
+INJECTED from /Users/devam/Documents/Brucira/Projects/hyperlocal-monorepo/apps/user-app/modules/my-module/android/src/main/AndroidManifest.xml
+INJECTED from /Users/devam/Documents/Brucira/Projects/hyperlocal-monorepo/apps/user-app/modules/my-module/android/src/main/AndroidManifest.xml
+	android:targetSdkVersion
+		INJECTED from /Users/devam/Documents/Brucira/Projects/hyperlocal-monorepo/apps/user-app/modules/my-module/android/src/main/AndroidManifest.xml
+	android:minSdkVersion
+		INJECTED from /Users/devam/Documents/Brucira/Projects/hyperlocal-monorepo/apps/user-app/modules/my-module/android/src/main/AndroidManifest.xml

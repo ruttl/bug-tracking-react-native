@@ -1,0 +1,9 @@
+{
+  "platforms": ["android", "ios", "web"],
+  "android": {
+    "modules": ["expo.modules.mymodule.MyModule"]
+  },
+  "ios": {
+    "modules": ["MyModule"]
+  }
+}

@@ -10,7 +10,6 @@ import {
   KeyboardAvoidingView,
   Modal,
   Platform,
-  SafeAreaView,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -20,22 +19,48 @@ import {
   TouchableWithoutFeedback,
   useColorScheme,
   View,
+  Alert,
 } from 'react-native';
 import { BottomSheet } from 'react-native-btr';
-import { PanGestureHandler } from 'react-native-gesture-handler';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { launchImageLibrary } from 'react-native-image-picker';
 import Ripple from 'react-native-material-ripple';
 import DeviceInfo from 'react-native-device-info';
 import Animated, {
   runOnJS,
-  useAnimatedGestureHandler,
   useAnimatedStyle,
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
 import { Path, Svg } from 'react-native-svg';
-import Toast from 'react-native-toast-message';
 import { captureRef, captureScreen } from 'react-native-view-shot';
+import {MyModuleJS} from './index';
+import { useVideoPlayer, VideoView } from 'expo-video';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import ToastManager, { Toast } from 'toastify-react-native';
+import LottieView from 'lottie-react-native';
+
+const ToastStyle = ({ text1, text2, ...props }) => {
+  return (
+    <View
+      style={[
+        styles.toastContainer,
+        props.error && {
+          borderColor: '#ff0000',
+          backgroundColor: '#ff0000',
+        },
+      ]}>
+      <Text style={{ color: '#fff', fontWeight: 'bold' }}>{text1}</Text>
+      {text2 && <Text style={{ color: '#fff', opacity: 0.85 }}>{text2}</Text>}
+    </View>
+  );
+};
+
+const toastConfig = {
+  success: (props) => <ToastStyle {...props} />,
+  info: (props) => <ToastStyle {...props} />,
+  error: (props) => <ToastStyle {...props} error={true} />,
+};
 
 const PADDING = 24;
 const BUTTON_SIZE = 72;
@@ -50,18 +75,14 @@ const START_POS = {
 };
 const height = SCREEN_HEIGHT * 0.72;
 const width = height * ASPECT_RATIO;
-
-const ERROR_MESSAGE_TITLE = 'Failed to capture this snapshot!';
-const ERROR_MESSAGE_DESCRIPTION = 'Please try again later.';
-
+const ERROR_MESSAGE_TITLE = 'Failed to capture this snapshot! Please retry';
 const MAX_MB = 10 * 1024 * 1024;
 
-const IS_PREVIEW = false;
 let BUILD_NUMBER = '1';
 const NGROK = `https://3c89-2401-4900-8817-1fea-e454-c83e-45c8-4a00.ngrok-free.app/ruttlp/us-central1`;
-const PREVIEW_URL = `https://us-central1-rally-brucira.cloudfunctions.net`;
-const PRODUCTION_URL = `https://us-central1-ruttlp.cloudfunctions.net`;
-const BASE_URL = IS_PREVIEW ? PREVIEW_URL : PRODUCTION_URL + `/mobile/projects`;
+const PREVIEW_URL = `https://preview.ruttl.com/api/mobile`;
+const PRODUCTION_URL = `https://us-central1-ruttlp.cloudfunctions.net/mobile/projects`;
+const BASE_URL = true ? PREVIEW_URL : PRODUCTION_URL;
 
 const CommentInput = ({
   comment,
@@ -131,7 +152,9 @@ const DraggableFab = ({
   initialX,
   initialY,
   manuallyUpload,
-  startRecordingCapture,
+  isRecording,
+  startRecording,
+  stopRecording,
   throttleMs = 800,
 }) => {
   const x = useSharedValue(initialX);
@@ -139,21 +162,29 @@ const DraggableFab = ({
   const [showOption, setShowOption] = useState(false);
   const tapBlocked = useRef(false);
 
+  const offsetX = useSharedValue(0);
+  const offsetY = useSharedValue(0);
+
   const handlePress = () => {
     if (tapBlocked.current) return;
     tapBlocked.current = true;
-    onPress?.();
+
+    if (isRecording) {
+      stopRecording?.();
+    } else {
+      onPress?.();
+    }
     setTimeout(() => (tapBlocked.current = false), throttleMs);
   };
 
-  const gesture = useAnimatedGestureHandler({
-    onStart: (_, ctx) => {
-      ctx.offsetX = x.value;
-      ctx.offsetY = y.value;
-    },
-    onActive: (event, ctx) => {
-      const newX = ctx.offsetX + event.translationX;
-      const newY = ctx.offsetY + event.translationY;
+  const dragGesture = Gesture.Pan()
+    .onStart(() => {
+      offsetX.value = x.value;
+      offsetY.value = y.value;
+    })
+    .onUpdate((event) => {
+      const newX = offsetX.value + event.translationX;
+      const newY = offsetY.value + event.translationY;
 
       x.value = Math.max(
         PADDING,
@@ -163,20 +194,24 @@ const DraggableFab = ({
         PADDING,
         Math.min(newY, SCREEN_HEIGHT - BUTTON_SIZE - PADDING),
       );
-    },
-    onEnd: () => {
-      const toLeft = x.value < SCREEN_WIDTH / 2;
-      const toTop = y.value < SCREEN_HEIGHT / 2;
+    })
+    .onEnd(() => {
+      const snapX =
+        x.value < SCREEN_WIDTH / 2
+          ? PADDING
+          : SCREEN_WIDTH - BUTTON_SIZE - PADDING;
+      const snapY =
+        y.value < SCREEN_HEIGHT / 2
+          ? PADDING
+          : SCREEN_HEIGHT - BUTTON_SIZE - PADDING;
 
-      const finalX = toLeft ? PADDING : SCREEN_WIDTH - BUTTON_SIZE - PADDING;
-      const finalY = toTop ? PADDING : SCREEN_HEIGHT - BUTTON_SIZE - PADDING;
+      x.value = withTiming(snapX);
+      y.value = withTiming(snapY);
 
-      x.value = withTiming(finalX, { duration: 400 });
-      y.value = withTiming(finalY, { duration: 400 }, () => {
-        if (onDragEnd) runOnJS(onDragEnd)({ x: finalX, y: finalY });
-      });
-    },
-  });
+      if (onDragEnd) {
+        runOnJS(onDragEnd)({ x: snapX, y: snapY });
+      }
+    });
 
   const fabStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: x.value }, { translateY: y.value }],
@@ -196,7 +231,9 @@ const DraggableFab = ({
 
     return {
       position: 'absolute',
-      top: isTop ? BUTTON_SIZE : -BUTTON_SIZE + 16,
+      top: isTop ? BUTTON_SIZE : -BUTTON_SIZE - 36,
+      flexDirection: isTop ? 'column' : 'column-reverse',
+      rowGap: 10,
     };
   }, [showOption]);
 
@@ -220,9 +257,7 @@ const DraggableFab = ({
         </TouchableWithoutFeedback>
       )}
 
-      <PanGestureHandler
-        hitSlop={{ top: 10, bottom: 10, left: 20, right: 20 }}
-        onGestureEvent={gesture}>
+      <GestureDetector gesture={dragGesture}>
         <Animated.View
           style={[
             {
@@ -248,6 +283,26 @@ const DraggableFab = ({
                   />
                   <Text style={styles.uploadText}>Upload Image</Text>
                 </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.uploadButton}
+                  onPress={() => {
+                    setShowOption(false);
+                    if (!isRecording) {
+                      startRecording?.();
+                    } else {
+                      stopRecording?.();
+                    }
+                  }}
+                  id="screen-upload-button">
+                  <Image
+                    source={require('./assets/plus.png')}
+                    style={styles.uploadIcon}
+                  />
+                  <Text style={styles.uploadText}>
+                    {isRecording ? 'Stop Recording' : 'Start Recording'}
+                  </Text>
+                </TouchableOpacity>
               </Animated.View>
             )}
 
@@ -257,14 +312,23 @@ const DraggableFab = ({
               style={styles.buttonContainer}
               onLongPress={() => setShowOption(true)}
               onPress={handlePress}>
-              <Image
-                source={require('./assets/ruttl.png')}
-                style={{ width: 24, height: 24 }}
-              />
+              {isRecording ? (
+                <LottieView
+                  source={require('./assets/live-pulse-animation.json')}
+                  autoPlay
+                  loop
+                  style={{ width: 60, height: 60 }}
+                />
+              ) : (
+                <Image
+                  source={require('./assets/ruttl.png')}
+                  style={{ width: 24, height: 24 }}
+                />
+              )}
             </TouchableOpacity>
           </Animated.View>
         </Animated.View>
-      </PanGestureHandler>
+      </GestureDetector>
     </>
   );
 };
@@ -303,6 +367,8 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
   const issueTitleRef = useRef(null);
   const [fabPos, setFabPos] = useState(START_POS);
   const scheme = useColorScheme();
+  const [isRecording, setIsRecording] = useState(false);
+  const [videoUri, setVideoUri] = useState(null);
 
   const toggleBottomNavigationView = () => {
     setbtmSheetVisible(!btmSheetVisible);
@@ -327,6 +393,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
     setError(false);
     setLoading(false);
     setShowImageUpload(false);
+    setVideoUri(null);
     isCapturing.current = false;
   };
 
@@ -413,9 +480,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
     }
   };
 
-  const backgroundSubmit = async (imageURI) => {
-    const API_URL = `${BASE_URL}/${projectID}`;
-
+  const submitTicketHandler = async (image) => {
     const headers = {
       'Content-Type': 'application/json',
       'x-plugin-code': token,
@@ -425,10 +490,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
     if (!packageName) {
       Toast.show({
         type: 'error',
-        text1: 'Application identifier not found',
-        text2: 'Please ensure the app is configured correctly.',
-        visibilityTime: 2000,
-        autoHide: true,
+        text1: 'Application identifier not found!',
       });
       return;
     }
@@ -438,47 +500,35 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
 
     const saveData = {
       comment,
-      description: haveDescription ? description?.trim() : null,
+      description: haveDescription ? description?.trim() : '',
       height: SCREEN_HEIGHT,
       width: SCREEN_WIDTH,
       osName: Platform.OS,
       appId: packageName,
-      buildNumber: Number(buildNumber),
-      highlightedCoords: highlightedCoords,
+      buildNumber,
+      highlightedCoords: highlightedCoords ?? {},
+      image,
+      projectID,
     };
 
     try {
-      const ticketResponse = await fetch(`${API_URL}/tickets`, {
+      const ticketResponse = await fetch(BASE_URL, {
         method: 'POST',
         headers,
         body: JSON.stringify(saveData),
       });
 
-      if (!ticketResponse.ok) {
-        throw new Error('Failed to create ticket');
-      }
-      const ticketJson = await ticketResponse.json();
-      const ticketID = ticketJson?.id;
+      const ticketData = await ticketResponse.json();
 
-      if (checkIsDataURI(imageURI)) {
-        const screenshotResponse = await fetch(
-          `${API_URL}/tickets/${ticketID}/screenshot`,
-          {
-            method: 'POST',
-            headers,
-            body: JSON.stringify({ image: imageURI }),
-          },
-        );
-
-        if (!screenshotResponse.ok) {
-          throw new Error('Failed to upload screenshot');
-        }
-
+      if (ticketData?.success) {
         Toast.show({
           type: 'success',
           text1: 'New ticket added successfully.',
-          visibilityTime: 2000,
-          autoHide: true,
+        });
+      } else {
+        Toast.show({
+          type: 'error',
+          text1: 'Something went wrong while creating the ticket.',
         });
       }
     } catch (err) {
@@ -488,9 +538,6 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
       Toast.show({
         type: 'error',
         text1: 'Ticket upload failed in background',
-        text2: err.message || 'Unknown error',
-        visibilityTime: 2000,
-        autoHide: true,
       });
     }
   };
@@ -504,9 +551,6 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
       Toast.show({
         type: 'error',
         text1: ERROR_MESSAGE_TITLE,
-        text2: ERROR_MESSAGE_DESCRIPTION,
-        visibilityTime: 2000,
-        autoHide: true,
       });
       return;
     }
@@ -525,16 +569,12 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
       }, 1000);
 
       if (checkIsDataURI(uri)) {
-        backgroundSubmit(uri);
+        submitTicketHandler(uri);
       }
     } catch (e) {
       Toast.show({
-        position: 'top',
         type: 'error',
         text1: 'Something went wrong',
-        text2: e?.message || 'Unknown error occurred',
-        visibilityTime: 3000,
-        autoHide: true,
       });
       setTimeout(() => {
         manuallyUpload();
@@ -548,12 +588,8 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
 
     if (!isValid) {
       Toast.show({
-        position: 'top',
         type: 'error',
         text1: 'Data-URI not found or invalid format',
-        text2: `URI: ${uri}`,
-        visibilityTime: 30000,
-        autoHide: true,
       });
       return false;
     }
@@ -631,10 +667,6 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
     openImagePicker();
   };
 
-  const onPressStartRecording = () => {
-    console.log('start recording capture pressed');
-  };
-
   const renderSVG = () => {
     if (!src) return null;
     return (
@@ -697,8 +729,8 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
   }, [scheme]);
 
   const pageLoaded = useMemo(() => {
-    return src || showImageUpload ? true : false;
-  }, [src, showImageUpload]);
+    return src || showImageUpload || videoUri ? true : false;
+  }, [src, showImageUpload, videoUri]);
 
   const disabledButton = useMemo(() => {
     return !src || !comment?.trim();
@@ -756,15 +788,74 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
 
     if (normalizedMaxX > normalizedMinX && normalizedMaxY > normalizedMinY) {
       return {
-        tlX: normalizedMinX,
-        tlY: normalizedMinY,
-        brX: normalizedMaxX,
-        brY: normalizedMaxY,
+        x1: normalizedMinX,
+        y1: normalizedMinY,
+        x2: normalizedMaxX,
+        y2: normalizedMaxY,
       };
     }
 
     return null;
   }, [paths, currentPath, width, height]);
+
+  const player = useVideoPlayer(null);
+
+  const startRecording = async () => {
+    try {
+      await MyModuleJS.startRecording();
+      setIsRecording(true);
+      console.log('🎥 Recording started');
+    } catch (e) {
+      Alert.alert('Error', 'Unable to start recording');
+      console.error('Start recording error:', e);
+    }
+  };
+
+  const stopRecording = async () => {
+    try {
+      const result = await MyModuleJS.stopRecording();
+      setIsRecording(false);
+      if (result?.uri) {
+        console.log('🛑 Recording stopped:', result);
+        setVideoUri(result.uri);
+        setVisible(true);
+      } else {
+        Alert.alert('No video found');
+      }
+    } catch (e) {
+      console.error('Stop recording error:', e);
+    }
+  };
+
+  useEffect(() => {
+    if (visible && videoUri && player) {
+      player.replaceAsync(videoUri).then(() => player.play());
+    }
+  }, [visible]);
+
+  useEffect(() => {
+    let interval;
+
+    if (isRecording) {
+      interval = setInterval(async () => {
+        const stillRecording = await MyModuleJS.isRecording();
+        const recorded = await MyModuleJS.isRecorded();
+
+        if (!stillRecording && recorded) {
+          const info = await MyModuleJS.getLatestVideoInfo();
+
+          if (info?.uri) {
+            console.log('Native auto-stop:', info);
+            setIsRecording(false);
+            setVideoUri(info.uri);
+            setVisible(true);
+          }
+        }
+      }, 1000);
+    }
+
+    return () => clearInterval(interval);
+  }, [isRecording]);
 
   return (
     <View style={{ zIndex: 999 }}>
@@ -777,14 +868,19 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
             onDragEnd={setFabPos}
             onPress={onScreenCapture}
             manuallyUpload={manuallyUpload}
-            startRecordingCapture={onPressStartRecording}
+            startRecording={startRecording}
+            stopRecording={stopRecording}
+            isRecording={isRecording}
           />
         ) : (
           <StatusBar backgroundColor={'#000'}></StatusBar>
         )}
 
-        <Modal animationType="slide" transparent={false} visible={visible}>
-          <SafeAreaView style={styles.modalContainer}>
+        <Modal
+          animationType="slide"
+          visible={visible}
+          statusBarTranslucent={true}>
+          <SafeAreaView style={[styles.modalContainer]}>
             <View
               style={{
                 flex: 1,
@@ -894,7 +990,13 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
                 }}
                 scrollEnabled={false}
                 style={{ flex: 1, backgroundColor: '#1F1F1F' }}>
-                {src || showImageUpload ? (
+                {videoUri ? (
+                  <VideoView
+                    key={videoUri}
+                    style={{ height: '100%', width: '100%' }}
+                    player={player}
+                  />
+                ) : src || showImageUpload ? (
                   <>
                     {src && (
                       <>
@@ -1031,7 +1133,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
           </SafeAreaView>
         </Modal>
       </Fragment>
-      <Toast autoHide={true} visibilityTime={3000} />
+      <ToastManager config={toastConfig} />
     </View>
   );
 };
@@ -1053,7 +1155,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     height: 60,
     width: 60,
-    // backgroundColor: COLORS[0],
     backgroundColor: 'white',
     borderRadius: 60 / 2,
     zIndex: 1,
@@ -1079,8 +1180,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 4,
     marginBottom: 16,
-    // borderWidth:1,
-    // borderColor: '#E7E7E7',
   },
   iconButton: {
     alignItems: 'center',
@@ -1093,7 +1192,6 @@ const styles = StyleSheet.create({
     borderRadius: 40 / 2,
   },
   colorsContainer: {
-    // flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     overflow: 'hidden',
@@ -1212,7 +1310,6 @@ const styles = StyleSheet.create({
   },
   bottomSheetTextInput: {
     width: '100%',
-    // height: 45,
     borderColor: '#E7E7E7',
     borderWidth: 1,
     borderRadius: 5,
@@ -1312,7 +1409,6 @@ const styles = StyleSheet.create({
     padding: 12,
     paddingHorizontal: 24,
   },
-
   uploadButtonShow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1334,6 +1430,29 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#333',
     fontWeight: '500',
+  },
+
+  stopContainer: {
+    width: 20,
+    height: 20,
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stopIcon: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: 'red',
+  },
+
+  toastContainer: {
+    backgroundColor: '#000',
+    padding: 12,
+    borderRadius: 24,
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.9)',
   },
 });
 
