@@ -34,22 +34,18 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Path, Svg } from 'react-native-svg';
 import { captureRef, captureScreen } from 'react-native-view-shot';
-import {MyModuleJS} from './index';
+import { MyModuleJS } from './index';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import ToastManager, { Toast } from 'toastify-react-native';
 import LottieView from 'lottie-react-native';
+import { Video } from 'react-native-compressor';
+import * as FileSystem from 'expo-file-system/legacy';
 
 const ToastStyle = ({ text1, text2, ...props }) => {
   return (
     <View
-      style={[
-        styles.toastContainer,
-        props.error && {
-          borderColor: '#ff0000',
-          backgroundColor: '#ff0000',
-        },
-      ]}>
+      style={[styles.toastContainer, props.error && styles.errorToastStyle]}>
       <Text style={{ color: '#fff', fontWeight: 'bold' }}>{text1}</Text>
       {text2 && <Text style={{ color: '#fff', opacity: 0.85 }}>{text2}</Text>}
     </View>
@@ -147,7 +143,7 @@ const CommentInput = ({
 };
 
 const DraggableFab = ({
-  onPress,
+  onScreenCapture,
   onDragEnd,
   initialX,
   initialY,
@@ -155,26 +151,20 @@ const DraggableFab = ({
   isRecording,
   startRecording,
   stopRecording,
-  throttleMs = 800,
 }) => {
   const x = useSharedValue(initialX);
   const y = useSharedValue(initialY);
   const [showOption, setShowOption] = useState(false);
-  const tapBlocked = useRef(false);
 
   const offsetX = useSharedValue(0);
   const offsetY = useSharedValue(0);
 
   const handlePress = () => {
-    if (tapBlocked.current) return;
-    tapBlocked.current = true;
-
     if (isRecording) {
       stopRecording?.();
     } else {
-      onPress?.();
+      setShowOption((prev) => !prev);
     }
-    setTimeout(() => (tapBlocked.current = false), throttleMs);
   };
 
   const dragGesture = Gesture.Pan()
@@ -231,7 +221,7 @@ const DraggableFab = ({
 
     return {
       position: 'absolute',
-      top: isTop ? BUTTON_SIZE : -BUTTON_SIZE - 36,
+      top: isTop ? BUTTON_SIZE : -BUTTON_SIZE - 86,
       flexDirection: isTop ? 'column' : 'column-reverse',
       rowGap: 10,
     };
@@ -274,14 +264,14 @@ const DraggableFab = ({
                   style={styles.uploadButton}
                   onPress={() => {
                     setShowOption(false);
-                    manuallyUpload?.();
+                    onScreenCapture?.();
                   }}
                   id="screen-upload-button">
                   <Image
                     source={require('./assets/plus.png')}
                     style={styles.uploadIcon}
                   />
-                  <Text style={styles.uploadText}>Upload Image</Text>
+                  <Text style={styles.uploadText}>Capture ScreenShot</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
@@ -302,6 +292,20 @@ const DraggableFab = ({
                   <Text style={styles.uploadText}>
                     {isRecording ? 'Stop Recording' : 'Start Recording'}
                   </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.uploadButton}
+                  onPress={() => {
+                    setShowOption(false);
+                    manuallyUpload?.();
+                  }}
+                  id="screen-upload-button">
+                  <Image
+                    source={require('./assets/plus.png')}
+                    style={styles.uploadIcon}
+                  />
+                  <Text style={styles.uploadText}>Upload Image</Text>
                 </TouchableOpacity>
               </Animated.View>
             )}
@@ -547,6 +551,24 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
       setError(true);
       return;
     }
+
+    if (!src && !videoUri) {
+      Toast.show({
+        type: 'error',
+        text1: 'No image or video found to submit',
+      });
+      return;
+    }
+
+    if (videoUri && !src) {
+      onReset();
+      Toast.show({
+        type: 'success',
+        text1: 'New Video Ticket submitted successfully.',
+      });
+      return;
+    }
+
     if (!exportRef.current) {
       Toast.show({
         type: 'error',
@@ -733,8 +755,8 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
   }, [src, showImageUpload, videoUri]);
 
   const disabledButton = useMemo(() => {
-    return !src || !comment?.trim();
-  }, [src, comment]);
+    return (!videoUri && !src) || !comment?.trim();
+  }, [src, comment, videoUri]);
 
   const buttonColor = useMemo(() => {
     return disabledButton ? '#7B7B7B' : '#6552FF';
@@ -815,6 +837,7 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
     try {
       const result = await MyModuleJS.stopRecording();
       setIsRecording(false);
+
       if (result?.uri) {
         console.log('🛑 Recording stopped:', result);
         setVideoUri(result.uri);
@@ -824,6 +847,37 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
       }
     } catch (e) {
       console.error('Stop recording error:', e);
+    }
+  };
+
+  const compressFile = async (fileUri) => {
+    try {
+      const originalInfo = await FileSystem.getInfoAsync(fileUri);
+      console.log(
+        '📦 Original Size:',
+        (originalInfo.size / (1024 * 1024)).toFixed(2),
+        'MB',
+      );
+
+      const compressedUri = await Video.compress(fileUri, {
+        compressionMethod: 'auto',
+      });
+
+      const compressedInfo = await FileSystem.getInfoAsync(compressedUri);
+      const originalSize = (originalInfo.size / (1024 * 1024)).toFixed(2);
+      const compressSize = (compressedInfo.size / (1024 * 1024)).toFixed(2);
+
+      console.log('📁 Compressed Done File:', compressedUri);
+      console.log('📉 Size:', compressSize, 'MB');
+
+      return {
+        uri: compressedUri,
+        sizeInMB: compressSize,
+        originalSizeInMB: originalSize,
+      };
+    } catch (e) {
+      console.error('Video compression error:', e);
+      return { uri: fileUri, sizeInMB: null };
     }
   };
 
@@ -864,9 +918,9 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
           <DraggableFab
             initialX={fabPos.x}
             initialY={fabPos.y}
-            throttleMs={1000}
             onDragEnd={setFabPos}
             onPress={onScreenCapture}
+            onScreenCapture={onScreenCapture}
             manuallyUpload={manuallyUpload}
             startRecording={startRecording}
             stopRecording={stopRecording}
@@ -876,11 +930,8 @@ export const BugTracking = ({ projectID = '', token = '' }) => {
           <StatusBar backgroundColor={'#000'}></StatusBar>
         )}
 
-        <Modal
-          animationType="slide"
-          visible={visible}
-          statusBarTranslucent={true}>
-          <SafeAreaView style={[styles.modalContainer]}>
+        <Modal animationType="slide" transparent={false} visible={visible}>
+          <SafeAreaView style={styles.modalContainer}>
             <View
               style={{
                 flex: 1,
@@ -1431,7 +1482,6 @@ const styles = StyleSheet.create({
     color: '#333',
     fontWeight: '500',
   },
-
   stopContainer: {
     width: 20,
     height: 20,
@@ -1446,13 +1496,16 @@ const styles = StyleSheet.create({
     borderRadius: 7,
     backgroundColor: 'red',
   },
-
   toastContainer: {
     backgroundColor: '#000',
     padding: 12,
     borderRadius: 24,
     borderWidth: 2,
     borderColor: 'rgba(255,255,255,0.9)',
+  },
+  errorToastStyle: {
+    borderColor: '#EC1818',
+    backgroundColor: '#EC1818',
   },
 });
 
