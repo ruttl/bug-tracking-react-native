@@ -7,15 +7,14 @@ data class ScreenRecordConfig(
     val width: Int,
     val height: Int,
     val bitrate: Int,
-    val frameRate: Int,
-    val filePath: String
+    val frameRate: Int
 ) : Parcelable {
+
     constructor(parcel: Parcel) : this(
         parcel.readInt(),
         parcel.readInt(),
         parcel.readInt(),
-        parcel.readInt(),
-        parcel.readString() ?: ""
+        parcel.readInt()
     )
 
     override fun writeToParcel(parcel: Parcel, flags: Int) {
@@ -23,7 +22,6 @@ data class ScreenRecordConfig(
         parcel.writeInt(height)
         parcel.writeInt(bitrate)
         parcel.writeInt(frameRate)
-        parcel.writeString(filePath)
     }
 
     override fun describeContents(): Int = 0
