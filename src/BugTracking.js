@@ -99,10 +99,10 @@ const DraggableFab = ({
   onDragEnd,
   initialX,
   initialY,
-  manuallyUpload,
   isRecording,
   startRecording,
   stopRecording,
+  videoLoading
 }) => {
   const x = useSharedValue(initialX);
   const y = useSharedValue(initialY);
@@ -117,11 +117,6 @@ const DraggableFab = ({
     } else {
       setShowOption((prev) => !prev);
     }
-  };
-
-  const uploadImageOptionHandler = () => {
-    setShowOption(false);
-    manuallyUpload?.();
   };
 
   const startRecordingHandler = () => {
@@ -244,19 +239,22 @@ const DraggableFab = ({
               onLongPress={() => setShowOption(true)}
               onPress={handlePress}
             >
-              {isRecording ? (
-                <LottieView
-                  source={require("./assets/live-pulse-animation.json")}
-                  autoPlay
-                  loop
-                  style={styles.lottie}
-                />
-              ) : (
-                <Image
-                  source={require("./assets/ruttl.png")}
-                  style={styles.ruttlIcon}
-                />
-              )}
+              {videoLoading ? (
+                <ActivityIndicator size="small" color={"#000"} />
+              )
+                : isRecording ? (
+                  <LottieView
+                    source={require("./assets/live-pulse-animation.json")}
+                    autoPlay
+                    loop
+                    style={styles.lottie}
+                  />
+                ) : (
+                  <Image
+                    source={require("./assets/ruttl.png")}
+                    style={styles.ruttlIcon}
+                  />
+                )}
             </TouchableOpacity>
           </Animated.View>
         </Animated.View>
@@ -435,8 +433,8 @@ const AssigneeModal = ({ isOpen, closeHandler, selectedAssignees = [], onChangeA
             contentContainerStyle={styles.assigneeListContent}
             keyboardShouldPersistTaps="handled"
           >
-            {filteredAssignees.length > 0 ? (
-              filteredAssignees.map((item) => {
+            {filteredAssignees?.length > 0 ? (
+              filteredAssignees?.map((item) => {
                 const isSelected = selectedAssignees.some(a => a.uid === item.uid);
                 return (
                   <AssigneeRow
@@ -700,7 +698,6 @@ const InputScreen = ({
                 alignItems: "center",
                 borderRadius: 100,
                 backgroundColor: buttonColor,
-                width: 89
               }}
                 disabled={disabled || loading}
               >
@@ -765,14 +762,14 @@ const InputScreen = ({
               iconBgColor={priorityButtonColor}
               text={selectedPriority || "Priority"}
               onPress={openPriorityModal}
-              style={{ flex: 1 }}
+              style={{ flexShrink: 0 }}
             />
             <ActionButton
               icon={require("./assets/date.png")}
               text={dueDateDisplay}
               iconBgColor={null}
               onPress={openDueDateModal}
-              style={{ flex: 1 }}
+              style={{ flexShrink: 0 }}
             />
             <ActionButton
               icon={require("./assets/assignee.png")}
@@ -780,7 +777,7 @@ const InputScreen = ({
               iconBgColor={null}
               onPress={openAssigneeModal}
               showNameImage={true}
-              style={{ flex: 1 }}
+              style={{ flexShrink: 2 }}
               startIcon={
                 selectedAssignees?.length > 0 ? (
                   <View style={{ flexDirection: "row" }}>
@@ -832,6 +829,16 @@ const PreviewScreen = ({ loading, src, videoUri, showImageUpload, onReset, setPa
   const [selectedColor, setSelectedColor] = useState(COLORS[1]);
   const [lastTouch, setLastTouch] = useState([-1, -1]);
   const [isTouch, setTouch] = useState(false);
+
+  useEffect(() => {
+    if (videoUri && player) {
+      setTimeout(() => {
+        player.replace(videoUri);
+        player.loop = true;
+        player.play();
+      }, 100);
+    }
+  }, [videoUri, player]);
 
   const pageLoaded = useMemo(() => {
     return src || showImageUpload || videoUri ? true : false;
@@ -1019,7 +1026,7 @@ const PreviewScreen = ({ loading, src, videoUri, showImageUpload, onReset, setPa
             key={videoUri}
             style={styles.videoView}
             player={player}
-            loop={true}
+            nativeControls={true}
           />
         ) : src || showImageUpload ? (
           <>
@@ -1183,9 +1190,8 @@ export const BugTracking = ({ projectID = "", token = "" }) => {
   const [isRecording, setIsRecording] = useState(false);
   const [videoUri, setVideoUri] = useState(null);
   const [projectDetails, setProjectDetails] = useState(null);
-  const player = useVideoPlayer(null, (vplayer) => {
-    vplayer.muted = false;
-  });
+  const [videoLoading, setVideoLoading] = useState(false);
+  const player = useVideoPlayer(null);
 
   const [selectedAssignees, setSelectedAssignees] = useState([]);
   const [selectedDueDate, setSelectedDueDate] = useState(null);
@@ -1208,6 +1214,7 @@ export const BugTracking = ({ projectID = "", token = "" }) => {
     setLoading(false);
     setShowImageUpload(false);
     setVideoUri(null);
+    if (player) player.pause();
     isCapturing.current = false;
     setSelectedAssignees([]);
     setSelectedDueDate(null);
@@ -1473,13 +1480,6 @@ export const BugTracking = ({ projectID = "", token = "" }) => {
     return isValid;
   };
 
-  const handleCommentChange = (text) => {
-    setComment(text);
-    if (error && text?.trim()) {
-      setError(false);
-    }
-  };
-
   const manuallyUpload = async () => {
     setWidgetVisible(false);
     setVisible(true);
@@ -1490,41 +1490,57 @@ export const BugTracking = ({ projectID = "", token = "" }) => {
   };
 
 
-  const requestAudioPermission = async () => {
-    if (Platform.OS === 'android') {
-      try {
-        const granted = await PermissionsAndroid.request(
-          PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
-          {
-            title: 'Audio Permission Needed',
-            message: 'App needs audio permission to record screen with sound.',
-            buttonNeutral: 'Ask Me Later',
-            buttonNegative: 'Cancel',
-            buttonPositive: 'OK',
-          }
-        );
-        return granted === PermissionsAndroid.RESULTS.GRANTED;
-      } catch (err) {
-        console.warn(err);
+  const checkPermissions = async () => {
+    if (Platform.OS !== 'android') return true;
+
+    const audioGranted = await PermissionsAndroid.request(
+      PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
+      {
+        title: 'Audio Permission Required',
+        message: 'App needs access to your microphone to record screen audio.',
+        buttonPositive: 'OK',
+        buttonNegative: 'Cancel',
+      }
+    );
+
+    if (audioGranted !== PermissionsAndroid.RESULTS.GRANTED) {
+      console.log("❌ Audio permission denied");
+      return false;
+    }
+
+    if (Platform.Version >= 33) {
+      const notificationGranted = await PermissionsAndroid.request(
+        PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS,
+        {
+          title: 'Notification Permission',
+          message: 'We need to show a notification while recording.',
+          buttonPositive: 'OK',
+          buttonNegative: 'Cancel',
+        }
+      );
+
+      if (notificationGranted !== PermissionsAndroid.RESULTS.GRANTED) {
+        console.log("❌ Notification permission denied");
         return false;
       }
     }
+
     return true;
   };
 
   const startRecording = async () => {
     try {
-      const hasPermission = await requestAudioPermission();
-      if (!hasPermission) {
-        console.log("❌ Audio permission denied");
+      const hasPermissions = await checkPermissions();
+      if (!hasPermissions) {
+        alert("Permissions are required to record the screen.");
         return;
       }
       const isStarted = await MyModuleJS.startRecording();
       if (isStarted) {
         setIsRecording(true);
-        console.log("✅ Recording started");
+        console.log("✅ Recording started successfully");
       } else {
-        console.log("❌ Recording cancelled or failed");
+        console.log("⚠️ Recording cancelled by user or failed to start");
         setIsRecording(false);
       }
     } catch (e) {
@@ -1536,15 +1552,29 @@ export const BugTracking = ({ projectID = "", token = "" }) => {
   const stopRecording = async () => {
     try {
       const result = await MyModuleJS.stopRecording();
+      setVideoLoading(true);
       setIsRecording(false);
-
       if (result?.uri) {
-        console.log("📁 Saved to:", result.uri);
+        console.log("📁 Video Path:", result.uri);
+        const info = await FileSystem.getInfoAsync(result.uri);
+        if (!info.exists || info.size < 1000) {
+          console.error("❌ File is too small or empty:", info);
+          Toast.show({ type: "error", text1: "Recording failed (Empty File)" });
+          return;
+        }
+        compressFile(result.uri)
         setVideoUri(result.uri);
         setVisible(true);
+        setVideoLoading(false)
+      } else {
+        setVideoLoading(false)
+        console.log("⚠️ Stopped, But no video returned (maybe short recording?)");
       }
     } catch (e) {
+      setVideoLoading(false);
       console.error("❌ Stop recording error:", e);
+    } finally {
+      setVideoLoading(false);
     }
   };
 
@@ -1578,7 +1608,6 @@ export const BugTracking = ({ projectID = "", token = "" }) => {
       return { uri: fileUri, sizeInMB: null };
     }
   };
-
 
   const theme = useMemo(() => {
     return {
@@ -1651,12 +1680,6 @@ export const BugTracking = ({ projectID = "", token = "" }) => {
   }, [paths, currentPath, width, height]);
 
   useEffect(() => {
-    if (visible && videoUri && player) {
-      player.replaceAsync(videoUri).then(() => player.play());
-    }
-  }, [visible]);
-
-  useEffect(() => {
     let interval;
 
     if (isRecording) {
@@ -1684,6 +1707,13 @@ export const BugTracking = ({ projectID = "", token = "" }) => {
     fetchProjectDetails();
   }, []);
 
+  const handleCommentChange = (text) => {
+    setComment(text);
+    if (error && text?.trim()) {
+      setError(false);
+    }
+  };
+
   return (
     <GestureHandlerRootView style={styles.mainContainer}>
       <Fragment>
@@ -1698,6 +1728,7 @@ export const BugTracking = ({ projectID = "", token = "" }) => {
             startRecording={startRecording}
             stopRecording={stopRecording}
             isRecording={isRecording}
+            videoLoading={videoLoading}
           />
         ) : (
           <StatusBar backgroundColor={"#000"}></StatusBar>
@@ -2240,11 +2271,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#1F1F1F',
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
-    justifyContent: "space-between", // buttons take full width with spacing
+    justifyContent: "space-evenly"
   },
 
   actionButton: {
-    flex: 1, // buttons share full available width equally
+    // flex: 1,
   },
 
   actionButtonGradient: {

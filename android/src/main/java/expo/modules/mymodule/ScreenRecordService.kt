@@ -5,7 +5,6 @@ import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
-import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
@@ -16,12 +15,12 @@ import android.media.projection.MediaProjection
 import android.media.projection.MediaProjectionManager
 import android.os.Build
 import android.os.IBinder
-import android.provider.MediaStore
 import android.util.Log
 import androidx.annotation.RequiresApi
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import java.io.File
 import java.io.IOException
 
 @RequiresApi(Build.VERSION_CODES.O)
@@ -32,11 +31,13 @@ class ScreenRecordService : Service() {
         const val STOP_RECORDING = "STOP_RECORDING"
         const val KEY_RECORDING_CONFIG = "KEY_RECORDING_CONFIG"
 
-        private const val NOTIFICATION_ID = 1
-        private const val CHANNEL_ID = "screen_record_channel"
+        private const val NOTIFICATION_ID = 9543
+        private const val CHANNEL_ID = "screen_record_channel_v2"
+        
+        // We use a simpler approach: Store the path in a static variable temporarily
+        // or a singleton pattern, but SharedPrefs is safer for service restarts.
         private const val PREFS_NAME = "ScreenRecordPrefs"
-        private const val KEY_LAST_URI = "latestVideoUri"
-        private const val KEY_LAST_NAME = "latestVideoName"
+        private const val KEY_LAST_PATH = "latestVideoPath"
 
         private val _isServiceRunning = MutableStateFlow(false)
         val isServiceRunning = _isServiceRunning.asStateFlow()
@@ -46,9 +47,15 @@ class ScreenRecordService : Service() {
 
         fun getSavedLatestInfo(context: Context): Pair<String?, String?> {
             val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            val uri = prefs.getString(KEY_LAST_URI, null)
-            val name = prefs.getString(KEY_LAST_NAME, null)
-            return Pair(uri, name)
+            val path = prefs.getString(KEY_LAST_PATH, null)
+            if (path != null) {
+                // Return URI as "file://" + path
+                val file = File(path)
+                if (file.exists() && file.length() > 0) {
+                    return Pair("file://$path", file.name)
+                }
+            }
+            return Pair(null, null)
         }
     }
 
@@ -56,8 +63,7 @@ class ScreenRecordService : Service() {
     private var mediaProjection: MediaProjection? = null
     private var recorder: MediaRecorder? = null
     private var virtualDisplay: VirtualDisplay? = null
-    private var videoUri: android.net.Uri? = null
-    private var videoName: String? = null
+    private var outputFile: File? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -78,7 +84,6 @@ class ScreenRecordService : Service() {
                     startForegroundNotification()
                     startRecording(config, resultCode, data)
                 } else {
-                    Log.e("ScreenRecordService", "Invalid parameters for recording.")
                     stopSelf()
                 }
             }
@@ -90,19 +95,17 @@ class ScreenRecordService : Service() {
     private fun startForegroundNotification() {
         val notification = Notification.Builder(this, CHANNEL_ID)
             .setContentTitle("Screen Recording")
-            .setContentText("Recording screen and audio...")
-            .setSmallIcon(android.R.drawable.ic_btn_speak_now)
+            .setContentText("Recording in progress...")
+            .setSmallIcon(android.R.drawable.ic_media_play)
             .setOngoing(true)
             .build()
 
-        // IMPORTANT: For Android 14 (API 34), you must specify microphone type
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            val serviceType = if (Build.VERSION.SDK_INT >= 34) { // Android 14+
-                 ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION or ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
+            val serviceType = if (Build.VERSION.SDK_INT >= 34) {
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION or ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
             } else {
-                 ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION
             }
-            
             startForeground(NOTIFICATION_ID, notification, serviceType)
         } else {
             startForeground(NOTIFICATION_ID, notification)
@@ -110,8 +113,6 @@ class ScreenRecordService : Service() {
     }
 
     private fun startRecording(config: ScreenRecordConfig, resultCode: Int, data: Intent) {
-        _isServiceRunning.value = true
-
         try {
             mediaProjection = mediaProjectionManager.getMediaProjection(resultCode, data)
             mediaProjection?.registerCallback(object : MediaProjection.Callback() {
@@ -120,65 +121,54 @@ class ScreenRecordService : Service() {
                 }
             }, null)
 
-            // Initialize URI
-            val values = ContentValues().apply {
-                put(MediaStore.Video.Media.RELATIVE_PATH, "Movies/")
-                put(MediaStore.Video.Media.MIME_TYPE, "video/mp4")
-                put(MediaStore.Video.Media.IS_PENDING, 1)
-                videoName = "record_${System.currentTimeMillis()}.mp4"
-                put(MediaStore.Video.Media.DISPLAY_NAME, videoName)
-            }
-            videoUri = contentResolver.insert(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, values)
+            // --- FIX: SAVE TO INTERNAL CACHE INSTEAD OF MEDIASTORE ---
+            // This prevents the 0-byte file lock issue.
+            outputFile = File(cacheDir, "rec_${System.currentTimeMillis()}.mp4")
             
-            if (videoUri == null) throw IOException("Failed to create video URI")
-
-            val fd = contentResolver.openFileDescriptor(videoUri!!, "w")!!.fileDescriptor
-
             recorder = MediaRecorder()
             
-            // --- STRICT ORDER FOR MEDIA RECORDER ---
-            // 1. Audio/Video Sources
-            recorder?.setAudioSource(MediaRecorder.AudioSource.MIC) // ADDED AUDIO SOURCE
+            // Audio + Video
+            recorder?.setAudioSource(MediaRecorder.AudioSource.MIC)
             recorder?.setVideoSource(MediaRecorder.VideoSource.SURFACE)
-            
-            // 2. Output Format
             recorder?.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
             
-            // 3. Encoders
-            recorder?.setAudioEncoder(MediaRecorder.AudioEncoder.AAC) // ADDED AUDIO ENCODER
             recorder?.setVideoEncoder(MediaRecorder.VideoEncoder.H264)
+            recorder?.setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
             
-            // 4. Configuration
             recorder?.setVideoSize(config.width, config.height)
             recorder?.setVideoEncodingBitRate(config.bitrate)
             recorder?.setVideoFrameRate(config.frameRate)
-            recorder?.setAudioEncodingBitRate(128000) // 128kbps audio
-            recorder?.setAudioSamplingRate(44100)     // 44.1kHz
             
-            // 5. Output File
-            recorder?.setOutputFile(fd)
+            recorder?.setAudioEncodingBitRate(128000)
+            recorder?.setAudioSamplingRate(44100)
 
-            // 6. Prepare and Start
-            recorder?.prepare()
+            // Write to local file path
+            recorder?.setOutputFile(outputFile!!.absolutePath)
             
+            recorder?.setOnErrorListener { mr, what, extra -> 
+                Log.e("ScreenRec", "MediaRecorder Error: $what, $extra")
+            }
+
+            recorder?.prepare()
+
             virtualDisplay = mediaProjection?.createVirtualDisplay(
-                "ScreenRecordDisplay",
+                "ScreenRec",
                 config.width,
                 config.height,
                 resources.displayMetrics.densityDpi,
-                DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
+                DisplayManager.VIRTUAL_DISPLAY_FLAG_PRESENTATION, // Changed flag for better stability
                 recorder?.surface,
                 null,
                 null
             )
-            
+
             recorder?.start()
-            Log.d("ScreenRecordService", "Recording started successfully with Audio.")
+            _isServiceRunning.value = true
+            Log.d("ScreenRec", "Started writing to: ${outputFile?.absolutePath}")
 
         } catch (e: Exception) {
-            Log.e("ScreenRecordService", "Failed to start recording: ${e.message}", e)
+            Log.e("ScreenRec", "Start failed", e)
             cleanupResources()
-            _isServiceRunning.value = false
             stopSelf()
         }
     }
@@ -188,30 +178,27 @@ class ScreenRecordService : Service() {
 
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                // Stop recorder safely
                 try {
                     recorder?.stop()
                 } catch (e: RuntimeException) {
-                    // If stop() is called immediately after start(), it fails. safe to ignore.
-                    Log.e("ScreenRecordService", "Recorder stop failed: ${e.message}")
+                   Log.e("ScreenRec", "Stop failed (no frames?): ${e.message}")
+                   // If stop fails, delete the corrupt file
+                   if (outputFile?.exists() == true) outputFile?.delete()
                 }
-                
+
                 cleanupResources()
 
-                // Finalize file
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && videoUri != null) {
-                    contentResolver.update(
-                        videoUri!!,
-                        ContentValues().apply { put(MediaStore.Video.Media.IS_PENDING, 0) },
-                        null,
-                        null
-                    )
+                // Save path to prefs so Module can read it
+                if (outputFile?.exists() == true && outputFile!!.length() > 0) {
+                    val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                    prefs.edit().putString(KEY_LAST_PATH, outputFile!!.absolutePath).apply()
+                    Log.d("ScreenRec", "File ready: ${outputFile!!.length()} bytes")
+                } else {
+                    Log.e("ScreenRec", "File is empty after stop")
                 }
 
-                delay(500) // Small buffer to ensure IO writes finish
-                saveLatestVideo()
             } catch (e: Exception) {
-                Log.e("ScreenRecordService", "Error stopping recording", e)
+                Log.e("ScreenRec", "Error stopping", e)
             } finally {
                 _isServiceRunning.value = false
                 _isRecorded.value = true
@@ -223,26 +210,15 @@ class ScreenRecordService : Service() {
 
     private fun cleanupResources() {
         try {
+            recorder?.reset()
             recorder?.release()
             virtualDisplay?.release()
             mediaProjection?.stop()
-        } catch (_: Exception) {}
-        
+        } catch (_: Exception) { }
         recorder = null
         virtualDisplay = null
         mediaProjection = null
     }
-
-    private fun saveLatestVideo() {
-        if (videoUri == null || videoName == null) return
-        val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        prefs.edit()
-            .putString(KEY_LAST_URI, videoUri.toString())
-            .putString(KEY_LAST_NAME, videoName)
-            .apply()
-    }
-
-    override fun onBind(intent: Intent?): IBinder? = null
 
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -252,4 +228,6 @@ class ScreenRecordService : Service() {
             getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
         }
     }
+    
+    override fun onBind(intent: Intent?): IBinder? = null
 }
