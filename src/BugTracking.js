@@ -21,6 +21,7 @@ import {
   View,
   Keyboard,
   PermissionsAndroid,
+  Linking,
 } from "react-native";
 import { Gesture, GestureDetector, GestureHandlerRootView } from "react-native-gesture-handler";
 import { launchImageLibrary } from "react-native-image-picker";
@@ -44,6 +45,7 @@ import { Video } from "react-native-compressor";
 import * as FileSystem from "expo-file-system/legacy";
 import LinearGradient from 'react-native-linear-gradient';
 import { Calendar } from 'react-native-calendars';
+import { useAudioPlayer } from 'expo-audio';
 
 const toastConfig = {
   success: (props) => <ToastStyle {...props} />,
@@ -119,12 +121,12 @@ const DraggableFab = ({
     }
   };
 
-  const startRecordingHandler = () => {
+  const startRecordingHandler = async () => {
     setShowOption(false);
     if (!isRecording) {
-      startRecording?.();
+      await startRecording();
     } else {
-      stopRecording?.();
+      await stopRecording?.();
     }
   };
 
@@ -236,7 +238,7 @@ const DraggableFab = ({
               activeOpacity={0.7}
               delayPressOut={300}
               style={styles.buttonContainer}
-              onLongPress={() => setShowOption(true)}
+              onLongPress={() => { }}
               onPress={handlePress}
             >
               {videoLoading ? (
@@ -591,6 +593,42 @@ const PriorityModal = ({ isOpen, closeHandler, onPrioritySelect }) => {
   );
 };
 
+const AudioPermissionModal = ({ isOpen, closeHandler, onOpenSettings, onContinueWithoutAudio }) => {
+  return (
+    <Modal
+      transparent
+      visible={isOpen}
+      animationType="fade"
+      onRequestClose={closeHandler}
+      onDismiss={closeHandler}
+    >
+      <View style={styles.centeredModalContainer}>
+        <View style={styles.modalContent}>
+          <Text style={styles.modalTitle}>Audio Permission Required</Text>
+
+          <Text style={[styles.modalText, { marginBottom: 24, color: '#FFF', opacity: 0.8, textAlign: 'center' }]}>
+            To record with audio, please enable microphone access in settings.
+          </Text>
+
+          <TouchableOpacity
+            style={[styles.continueButton, { backgroundColor: '#6552FF', marginBottom: 12, width: '100%' }]}
+            onPress={onOpenSettings}
+          >
+            <Text style={styles.continueButtonText}>Open Settings</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.continueButton, { backgroundColor: 'transparent', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', width: '100%' }]}
+            onPress={onContinueWithoutAudio}
+          >
+            <Text style={styles.continueButtonText}>Record without Audio</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+};
+
 const InputScreen = ({
   comment,
   handleCommentChange,
@@ -762,14 +800,12 @@ const InputScreen = ({
               iconBgColor={priorityButtonColor}
               text={selectedPriority || "Priority"}
               onPress={openPriorityModal}
-              style={{ flexShrink: 0 }}
             />
             <ActionButton
               icon={require("./assets/date.png")}
               text={dueDateDisplay}
               iconBgColor={null}
               onPress={openDueDateModal}
-              style={{ flexShrink: 0 }}
             />
             <ActionButton
               icon={require("./assets/assignee.png")}
@@ -777,7 +813,7 @@ const InputScreen = ({
               iconBgColor={null}
               onPress={openAssigneeModal}
               showNameImage={true}
-              style={{ flexShrink: 2 }}
+              style={{ flex: 0, width: "auto" }}
               startIcon={
                 selectedAssignees?.length > 0 ? (
                   <View style={{ flexDirection: "row" }}>
@@ -834,7 +870,7 @@ const PreviewScreen = ({ loading, src, videoUri, showImageUpload, onReset, setPa
     if (videoUri && player) {
       setTimeout(() => {
         player.replace(videoUri);
-        player.loop = true;
+        player.loop = false;
         player.play();
       }, 100);
     }
@@ -1192,10 +1228,43 @@ export const BugTracking = ({ projectID = "", token = "" }) => {
   const [projectDetails, setProjectDetails] = useState(null);
   const [videoLoading, setVideoLoading] = useState(false);
   const player = useVideoPlayer(null);
+  const [showAudioPermissionModal, setShowAudioPermissionModal] = useState(false);
 
   const [selectedAssignees, setSelectedAssignees] = useState([]);
   const [selectedDueDate, setSelectedDueDate] = useState(null);
   const [selectedPriority, setSelectedPriority] = useState(null);
+  const audioPlayer = useAudioPlayer(require('./assets/start-audio.mp3'));
+
+  const playSound = () => {
+    audioPlayer.seekTo(0.5);
+    audioPlayer.play();
+  };
+
+  const handleAudioPermissionSettings = async () => {
+    setShowAudioPermissionModal(false);
+    await Linking.openSettings();
+  };
+
+  const handleContinueWithoutAudio = async () => {
+    setShowAudioPermissionModal(false);
+    const granted = await MyModuleJS.requestPermissions();
+    if (granted) {
+      playSound();
+      try {
+        const isStarted = await MyModuleJS.startRecordingService();
+        if (isStarted) {
+          setIsRecording(true);
+        } else {
+          setIsRecording(false);
+        }
+      } catch (e) {
+        console.error("❌ Start recording error:", e);
+        setIsRecording(false);
+      }
+    } else {
+      console.log("❌ Media Projection permission denied");
+    }
+  };
 
   const toggleBottomNavigationView = () => {
     setbtmSheetVisible(!btmSheetVisible);
@@ -1217,6 +1286,8 @@ export const BugTracking = ({ projectID = "", token = "" }) => {
     if (player) player.pause();
     isCapturing.current = false;
     setSelectedAssignees([]);
+    setSelectedDueDate(null);
+    setSelectedPriority(null);
     setSelectedDueDate(null);
     setSelectedPriority(null);
     setbtmSheetVisible(false);
@@ -1331,7 +1402,41 @@ export const BugTracking = ({ projectID = "", token = "" }) => {
     }
   };
 
-  const submitTicketHandler = async (image) => {
+  const uploadVideo = async (videoUri) => {
+    try {
+      const compressedUri = await Video.compress(videoUri, {
+        compressionMethod: 'auto',
+      });
+
+      const formData = new FormData();
+      formData.append('file', {
+        uri: compressedUri,
+        type: 'video/mp4',
+        name: 'upload.mp4',
+      });
+
+      const response = await fetch('https://us-central1-ruttlp.cloudfunctions.net/uploadFile', {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      const result = await response.json();
+      console.log("Upload response:", result);
+      if (result.success && result.files && result.files.length > 0) {
+        return result.files[0].url;
+      } else {
+        throw new Error("Upload failed or no file url returned");
+      }
+    } catch (error) {
+      console.error("Video upload error:", error);
+      throw error;
+    }
+  };
+
+  const submitTicketHandler = async (image = '', videoUrlFile = '') => {
     const headers = {
       "Content-Type": "application/json",
       "x-plugin-code": token,
@@ -1358,9 +1463,13 @@ export const BugTracking = ({ projectID = "", token = "" }) => {
       appId: packageName,
       buildNumber,
       highlightedCoords: highlightedCoords ?? {},
-      image,
+      image: image ? image : '',
       projectID,
     };
+
+    if (videoUrlFile) {
+      saveData.video = videoUrlFile;
+    }
 
     if (selectedPriority) {
       saveData.priority = { high: 1, medium: 2, low: 3 }[selectedPriority];
@@ -1407,29 +1516,7 @@ export const BugTracking = ({ projectID = "", token = "" }) => {
     }
   };
 
-  const onSubmit = async () => {
-    if (!comment.trim()) {
-      setError(true);
-      return;
-    }
-
-    if (!src && !videoUri) {
-      Toast.show({
-        type: "error",
-        text1: "No image or video found to submit",
-      });
-      return;
-    }
-
-    if (videoUri && !src) {
-      onReset();
-      Toast.show({
-        type: "success",
-        text1: "New Video Ticket submitted successfully.",
-      });
-      return;
-    }
-
+  const imageSubmit = async () => {
     if (!exportRef.current) {
       Toast.show({
         type: "error",
@@ -1463,6 +1550,59 @@ export const BugTracking = ({ projectID = "", token = "" }) => {
         manuallyUpload();
       }, 2000);
     }
+  }
+
+  const videoSubmit = async () => {
+    if (!videoUri) {
+      Toast.show({
+        type: "error",
+        text1: "No video found to submit",
+      });
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const uploadedUrl = await uploadVideo(videoUri);
+
+      setTimeout(() => {
+        onReset();
+      }, 1000);
+
+      await submitTicketHandler(null, uploadedUrl);
+
+    } catch (e) {
+      console.error("Video submit error:", e);
+      Toast.show({
+        type: "error",
+        text1: "Failed to upload video or submit ticket",
+      });
+      setLoading(false);
+    }
+  }
+
+  const onSubmit = async () => {
+    Keyboard.dismiss();
+    if (!comment.trim()) {
+      setError(true);
+      return;
+    }
+
+    if (!src && !videoUri) {
+      Toast.show({
+        type: "error",
+        text1: "No image or video found to submit",
+      });
+      return;
+    }
+
+    if (videoUri && !src) {
+      videoSubmit()
+    }
+
+    if (src && !videoUri) {
+      imageSubmit()
+    }
   };
 
   const checkIsDataURI = (uri) => {
@@ -1489,7 +1629,6 @@ export const BugTracking = ({ projectID = "", token = "" }) => {
     openImagePicker();
   };
 
-
   const checkPermissions = async () => {
     if (Platform.OS !== 'android') return true;
 
@@ -1503,8 +1642,13 @@ export const BugTracking = ({ projectID = "", token = "" }) => {
       }
     );
 
+    if (audioGranted === PermissionsAndroid.RESULTS.NEVER_ASK_AGAIN) {
+      setShowAudioPermissionModal(true);
+      return false;
+    }
+
     if (audioGranted !== PermissionsAndroid.RESULTS.GRANTED) {
-      console.log("❌ Audio permission denied");
+      setShowAudioPermissionModal(true)
       return false;
     }
 
@@ -1531,20 +1675,24 @@ export const BugTracking = ({ projectID = "", token = "" }) => {
   const startRecording = async () => {
     try {
       const hasPermissions = await checkPermissions();
-      if (!hasPermissions) {
-        alert("Permissions are required to record the screen.");
-        return;
-      }
-      const isStarted = await MyModuleJS.startRecording();
-      if (isStarted) {
-        setIsRecording(true);
-        console.log("✅ Recording started successfully");
-      } else {
-        console.log("⚠️ Recording cancelled by user or failed to start");
-        setIsRecording(false);
+      if (!hasPermissions) return;
+
+      const granted = await MyModuleJS.requestPermissions();
+      if (granted) {
+        playSound();
+        try {
+          const isStarted = await MyModuleJS.startRecordingService();
+          if (isStarted) {
+            setIsRecording(true);
+          } else {
+            setIsRecording(false);
+          }
+        } catch (e) {
+          console.error("❌ Start recording error:", e);
+          setIsRecording(false);
+        }
       }
     } catch (e) {
-      console.error("❌ Start recording error:", e);
       setIsRecording(false);
     }
   };
@@ -1555,17 +1703,15 @@ export const BugTracking = ({ projectID = "", token = "" }) => {
       setVideoLoading(true);
       setIsRecording(false);
       if (result?.uri) {
-        console.log("📁 Video Path:", result.uri);
         const info = await FileSystem.getInfoAsync(result.uri);
         if (!info.exists || info.size < 1000) {
           console.error("❌ File is too small or empty:", info);
           Toast.show({ type: "error", text1: "Recording failed (Empty File)" });
           return;
         }
-        compressFile(result.uri)
         setVideoUri(result.uri);
         setVisible(true);
-        setVideoLoading(false)
+        setVideoLoading(false);
       } else {
         setVideoLoading(false)
         console.log("⚠️ Stopped, But no video returned (maybe short recording?)");
@@ -1578,34 +1724,10 @@ export const BugTracking = ({ projectID = "", token = "" }) => {
     }
   };
 
-  const compressFile = async (fileUri) => {
-    try {
-      const originalInfo = await FileSystem.getInfoAsync(fileUri);
-      console.log(
-        "📦 Original Size:",
-        (originalInfo.size / (1024 * 1024)).toFixed(2),
-        "MB"
-      );
-
-      const compressedUri = await Video.compress(fileUri, {
-        compressionMethod: "auto",
-      });
-
-      const compressedInfo = await FileSystem.getInfoAsync(compressedUri);
-      const originalSize = (originalInfo.size / (1024 * 1024)).toFixed(2);
-      const compressSize = (compressedInfo.size / (1024 * 1024)).toFixed(2);
-
-      console.log("📁 Compressed Done File:", compressedUri);
-      console.log("📉 Size:", compressSize, "MB");
-
-      return {
-        uri: compressedUri,
-        sizeInMB: compressSize,
-        originalSizeInMB: originalSize,
-      };
-    } catch (e) {
-      console.error("Video compression error:", e);
-      return { uri: fileUri, sizeInMB: null };
+  const handleCommentChange = (text) => {
+    setComment(text);
+    if (error && text?.trim()) {
+      setError(false);
     }
   };
 
@@ -1688,13 +1810,14 @@ export const BugTracking = ({ projectID = "", token = "" }) => {
         const recorded = await MyModuleJS.isRecorded();
 
         if (!stillRecording && recorded) {
+          setIsRecording(false);
           const info = await MyModuleJS.getLatestVideoInfo();
 
           if (info?.uri) {
             console.log("Native auto-stop:", info);
-            setIsRecording(false);
             setVideoUri(info.uri);
             setVisible(true);
+            setVideoLoading(false);
           }
         }
       }, 1000);
@@ -1707,16 +1830,32 @@ export const BugTracking = ({ projectID = "", token = "" }) => {
     fetchProjectDetails();
   }, []);
 
-  const handleCommentChange = (text) => {
-    setComment(text);
-    if (error && text?.trim()) {
-      setError(false);
-    }
-  };
+  useEffect(() => {
+    const checkRecordingStatus = async () => {
+      try {
+        const recording = await MyModuleJS.isRecording();
+        if (recording) {
+          setIsRecording(true);
+        }
+      } catch (e) {
+        console.log("Error checking recording status:", e);
+      }
+    };
+    checkRecordingStatus();
+    const timer = setTimeout(checkRecordingStatus, 2000);
+    return () => clearTimeout(timer);
+  }, []);
+
 
   return (
     <GestureHandlerRootView style={styles.mainContainer}>
       <Fragment>
+        <AudioPermissionModal
+          isOpen={showAudioPermissionModal}
+          closeHandler={() => setShowAudioPermissionModal(false)}
+          onOpenSettings={handleAudioPermissionSettings}
+          onContinueWithoutAudio={handleContinueWithoutAudio}
+        />
         {widgetVisible && !src ? (
           <DraggableFab
             initialX={fabPos.x}
@@ -2271,17 +2410,18 @@ const styles = StyleSheet.create({
     backgroundColor: '#1F1F1F',
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
-    justifyContent: "space-evenly"
+    alignItems: 'center',
   },
 
   actionButton: {
-    // flex: 1,
+    flex: 1,
+    minWidth: (SCREEN_WIDTH - 48) / 3,
   },
 
   actionButtonGradient: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'flex-start', // align icon + text to left
+    justifyContent: 'flex-start',
     paddingVertical: 12,
     paddingHorizontal: 12,
     borderWidth: 1,
@@ -2298,7 +2438,8 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     letterSpacing: -0.24,
     textTransform: 'capitalize',
-    flexShrink: 1,
+    flex: 1,
+    flexWrap: 'nowrap'
   },
 
   actionButtonIconBg: {
@@ -2340,6 +2481,7 @@ const styles = StyleSheet.create({
 
   previewCloseButton: {
     marginRight: "auto",
+    padding: 2
   },
   previewCloseIcon: {
     height: 16,
@@ -2367,6 +2509,19 @@ const styles = StyleSheet.create({
   },
   commentErrorText: {
     marginLeft: 12,
+  },
+  centeredModalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  modalContent: {
+    width: '85%',
+    backgroundColor: '#1F1F1F',
+    borderRadius: 16,
+    padding: 24,
+    alignItems: 'center',
   },
 });
 

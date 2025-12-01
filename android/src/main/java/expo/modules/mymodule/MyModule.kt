@@ -25,8 +25,13 @@ class MyModule : Module() {
     private val activity get() = requireNotNull(appContext.activityProvider?.currentActivity)
 
     private val REQUEST_CODE_SCREEN_CAPTURE = 1002
-    private var startRecordingPromise: Promise? = null
+    private var requestPermissionPromise: Promise? = null
     private val coroutineScope = CoroutineScope(Dispatchers.Default)
+    private var enableAudio = true
+    
+    // Store permission results
+    private var permissionResultCode: Int = 0
+    private var permissionResultData: Intent? = null
 
     override fun definition() = ModuleDefinition {
         Name("MyModule")
@@ -39,16 +44,17 @@ class MyModule : Module() {
             if (uri != null && name != null) mapOf("uri" to uri, "name" to name) else null
         }
 
-        AsyncFunction("startRecording") { promise: Promise ->
+        AsyncFunction("requestPermissions") { promise: Promise ->
             if (ScreenRecordService.isServiceRunning.value) {
                 promise.resolve(true)
                 return@AsyncFunction
             }
 
             // 1. Check AUDIO Permission
+            enableAudio = true
             if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-                promise.reject("PERMISSION_ERROR", "Audio permission not granted", null)
-                return@AsyncFunction
+                // Audio permission not granted, but we continue without audio
+                enableAudio = false
             }
             
             // 2. Check NOTIFICATION Permission (Android 13+)
@@ -59,14 +65,69 @@ class MyModule : Module() {
                 }
             }
 
-            startRecordingPromise = promise
+            requestPermissionPromise = promise
             try {
                 val mpManager = activity.getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
                 val captureIntent = mpManager.createScreenCaptureIntent()
                 activity.startActivityForResult(captureIntent, REQUEST_CODE_SCREEN_CAPTURE)
             } catch (e: Exception) {
-                startRecordingPromise = null
+                requestPermissionPromise = null
                 promise.reject("ERR_START", "Failed to launch activity", e)
+            }
+        }
+
+        AsyncFunction("startRecordingService") { promise: Promise ->
+            if (ScreenRecordService.isServiceRunning.value) {
+                promise.resolve(true)
+                return@AsyncFunction
+            }
+
+            if (permissionResultData == null) {
+                promise.reject("ERR_NO_PERM", "No recording permission data found. Call requestPermissions first.", null)
+                return@AsyncFunction
+            }
+
+            try {
+                val metrics = context.resources.displayMetrics
+                
+                // --- FIX FOR GLITCHES: ALIGN DIMENSIONS TO 16 ---
+                val rawWidth = metrics.widthPixels
+                val rawHeight = metrics.heightPixels
+                
+                val width = (rawWidth / 16) * 16
+                val height = (rawHeight / 16) * 16
+
+                // Higher bitrate for cleaner recording (approx 8Mbps)
+                val bitrate = (width * height * 4).coerceAtLeast(2_000_000) 
+                
+                val config = ScreenRecordConfig(width, height, bitrate, 30)
+
+                val serviceIntent = Intent(context, ScreenRecordService::class.java).apply {
+                    action = ScreenRecordService.START_RECORDING
+                    putExtra(ScreenRecordService.KEY_RECORDING_CONFIG, config)
+                    putExtra("resultCode", permissionResultCode)
+                    putExtra("data", permissionResultData)
+                    putExtra("enableAudio", enableAudio)
+                }
+                
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    context.startForegroundService(serviceIntent)
+                } else {
+                    context.startService(serviceIntent)
+                }
+
+                coroutineScope.launch {
+                    try {
+                        withTimeout(5000L) {
+                            ScreenRecordService.isServiceRunning.filter { it }.first()
+                        }
+                        promise.resolve(true)
+                    } catch (e: Exception) {
+                        promise.reject("START_TIMEOUT", "Service failed to start", e)
+                    }
+                }
+            } catch (e: Exception) {
+                promise.reject("START_ERROR", "Failed to start service", e)
             }
         }
 
@@ -99,50 +160,17 @@ class MyModule : Module() {
         }
 
         OnActivityResult { _, result ->
-            val promise = startRecordingPromise
-            startRecordingPromise = null
+            val promise = requestPermissionPromise
+            requestPermissionPromise = null
 
             if (result.requestCode == REQUEST_CODE_SCREEN_CAPTURE) {
                 if (result.resultCode == RESULT_OK && result.data != null) {
-                    val metrics = context.resources.displayMetrics
-                    
-                    // --- FIX FOR GLITCHES: ALIGN DIMENSIONS TO 16 ---
-                    // H.264 encoders often crash or glitch if width/height are not divisible by 16
-                    val rawWidth = metrics.widthPixels
-                    val rawHeight = metrics.heightPixels
-                    
-                    val width = (rawWidth / 16) * 16
-                    val height = (rawHeight / 16) * 16
-
-                    // Higher bitrate for cleaner recording (approx 8Mbps)
-                    val bitrate = (width * height * 4).coerceAtLeast(2_000_000) 
-                    
-                    val config = ScreenRecordConfig(width, height, bitrate, 30)
-
-                    val serviceIntent = Intent(context, ScreenRecordService::class.java).apply {
-                        action = ScreenRecordService.START_RECORDING
-                        putExtra(ScreenRecordService.KEY_RECORDING_CONFIG, config)
-                        putExtra("resultCode", result.resultCode)
-                        putExtra("data", result.data)
-                    }
-                    
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                        context.startForegroundService(serviceIntent)
-                    } else {
-                        context.startService(serviceIntent)
-                    }
-
-                    coroutineScope.launch {
-                        try {
-                            withTimeout(5000L) {
-                                ScreenRecordService.isServiceRunning.filter { it }.first()
-                            }
-                            promise?.resolve(true)
-                        } catch (e: Exception) {
-                            promise?.reject("START_TIMEOUT", "Service failed to start", e)
-                        }
-                    }
+                    permissionResultCode = result.resultCode
+                    permissionResultData = result.data
+                    promise?.resolve(true)
                 } else {
+                    permissionResultCode = 0
+                    permissionResultData = null
                     promise?.resolve(false) // Permission denied by user in system dialog
                 }
             }
