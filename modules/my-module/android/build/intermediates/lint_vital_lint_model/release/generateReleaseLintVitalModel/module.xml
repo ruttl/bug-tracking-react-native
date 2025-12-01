@@ -1,0 +1,18 @@
+<lint-module
+    format="1"
+    dir="/Users/devam/Documents/Brucira/Projects/hyperlocal-monorepo/apps/user-app/modules/my-module/android"
+    name=":my-module"
+    type="LIBRARY"
+    maven="expo.modules.mymodule:my-module:0.7.6"
+    agpVersion="8.8.2"
+    buildFolder="build"
+    bootClassPath="/Users/devam/Library/Android/sdk/platforms/android-35/android.jar:/Users/devam/Library/Android/sdk/build-tools/35.0.0/core-lambda-stubs.jar"
+    javaSourceLevel="17"
+    compileTarget="android-35"
+    neverShrinking="true">
+  <lintOptions
+      absolutePaths="true"
+      checkReleaseBuilds="true"
+      explainIssues="true"/>
+  <variant name="release"/>
+</lint-module>

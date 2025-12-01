@@ -1,0 +1,40 @@
+1<?xml version="1.0" encoding="utf-8"?>
+2<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+3    package="expo.modules.mymodule" >
+4
+5    <uses-sdk android:minSdkVersion="24" />
+6
+7    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+7-->/Users/devam/Documents/Brucira/Projects/hyperlocal-monorepo/apps/user-app/modules/my-module/android/src/main/AndroidManifest.xml:4:5-77
+7-->/Users/devam/Documents/Brucira/Projects/hyperlocal-monorepo/apps/user-app/modules/my-module/android/src/main/AndroidManifest.xml:4:22-74
+8    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
+8-->/Users/devam/Documents/Brucira/Projects/hyperlocal-monorepo/apps/user-app/modules/my-module/android/src/main/AndroidManifest.xml:5:5-94
+8-->/Users/devam/Documents/Brucira/Projects/hyperlocal-monorepo/apps/user-app/modules/my-module/android/src/main/AndroidManifest.xml:5:22-91
+9    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+9-->/Users/devam/Documents/Brucira/Projects/hyperlocal-monorepo/apps/user-app/modules/my-module/android/src/main/AndroidManifest.xml:6:5-88
+9-->/Users/devam/Documents/Brucira/Projects/hyperlocal-monorepo/apps/user-app/modules/my-module/android/src/main/AndroidManifest.xml:6:22-85
+10    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+10-->/Users/devam/Documents/Brucira/Projects/hyperlocal-monorepo/apps/user-app/modules/my-module/android/src/main/AndroidManifest.xml:8:5-71
+10-->/Users/devam/Documents/Brucira/Projects/hyperlocal-monorepo/apps/user-app/modules/my-module/android/src/main/AndroidManifest.xml:8:22-68
+11    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+11-->/Users/devam/Documents/Brucira/Projects/hyperlocal-monorepo/apps/user-app/modules/my-module/android/src/main/AndroidManifest.xml:9:5-77
+11-->/Users/devam/Documents/Brucira/Projects/hyperlocal-monorepo/apps/user-app/modules/my-module/android/src/main/AndroidManifest.xml:9:22-74
+12    <uses-permission android:name="android.permission.INTERNET" />
+12-->/Users/devam/Documents/Brucira/Projects/hyperlocal-monorepo/apps/user-app/modules/my-module/android/src/main/AndroidManifest.xml:10:5-67
+12-->/Users/devam/Documents/Brucira/Projects/hyperlocal-monorepo/apps/user-app/modules/my-module/android/src/main/AndroidManifest.xml:10:22-64
+13
+14    <application>
+14-->/Users/devam/Documents/Brucira/Projects/hyperlocal-monorepo/apps/user-app/modules/my-module/android/src/main/AndroidManifest.xml:12:5-18:19
+15        <service
+15-->/Users/devam/Documents/Brucira/Projects/hyperlocal-monorepo/apps/user-app/modules/my-module/android/src/main/AndroidManifest.xml:13:9-17:74
+16            android:name="expo.modules.mymodule.ScreenRecordService"
+16-->/Users/devam/Documents/Brucira/Projects/hyperlocal-monorepo/apps/user-app/modules/my-module/android/src/main/AndroidManifest.xml:14:13-48
+17            android:enabled="true"
+17-->/Users/devam/Documents/Brucira/Projects/hyperlocal-monorepo/apps/user-app/modules/my-module/android/src/main/AndroidManifest.xml:15:13-35
+18            android:exported="false"
+18-->/Users/devam/Documents/Brucira/Projects/hyperlocal-monorepo/apps/user-app/modules/my-module/android/src/main/AndroidManifest.xml:16:13-37
+19            android:foregroundServiceType="mediaProjection|microphone" />
+19-->/Users/devam/Documents/Brucira/Projects/hyperlocal-monorepo/apps/user-app/modules/my-module/android/src/main/AndroidManifest.xml:17:13-71
+20    </application>
+21
+22</manifest>
