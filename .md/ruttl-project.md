@@ -11,9 +11,6 @@
 - npm run build / yarn build
 - npm pack / yarn pack
 
--------------------- CONSUMER PROJECTS TODO --------------------
-- yarn cache clean @ruttl/bug-tracking
-
 -------------------- CONSUMER PROJECTS APP BUILD --------------------
 - cd android
 - ./gradlew assembleRelease
@@ -29,3 +26,6 @@
 - npm login (IF NOT LOGIN)
 - npm whoami (CHECK LOGIN USER)
 - npm publish --access public (PUSH CHANGES)
+
+-------------------- CONSUMER PROJECTS TODO --------------------
+- yarn cache clean @ruttl/bug-tracking
