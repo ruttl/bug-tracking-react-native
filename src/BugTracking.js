@@ -72,12 +72,12 @@ const MAX_MB = 10 * 1024 * 1024;
 let BUILD_NUMBER = "1";
 const NGROK = `https://3c89-2401-4900-8817-1fea-e454-c83e-45c8-4a00.ngrok-free.app/ruttlp/us-central1`;
 const PREVIEW_URL = `https://preview.ruttl.com/api/mobile`;
-const PRODUCTION_URL = `https://us-central1-ruttlp.cloudfunctions.net/mobile/projects`;
-const BASE_URL = true ? PREVIEW_URL : PRODUCTION_URL;
+const PRODUCTION_URL = `https://web.ruttl.com/api/mobile`;
+const BASE_URL = PRODUCTION_URL;
 
 const ToastStyle = ({ text1, text2, ...props }) => {
   return (
-    <View style={[styles.toastContainer, props.error && styles.errorToastStyle]}>
+    <View pointerEvents="none" style={[styles.toastContainer, props.error && styles.errorToastStyle]}>
       <Text style={styles.toastText1}>{text1}</Text>
       {text2 && <Text style={styles.toastText2}>{text2}</Text>}
     </View>
@@ -813,7 +813,6 @@ const InputScreen = ({
               iconBgColor={null}
               onPress={openAssigneeModal}
               showNameImage={true}
-              style={{ flex: 0, width: "auto" }}
               startIcon={
                 selectedAssignees?.length > 0 ? (
                   <View style={{ flexDirection: "row" }}>
@@ -1948,7 +1947,7 @@ export const BugTracking = ({ projectID = "", token = "" }) => {
           </SafeAreaView>
         </Modal>
       </Fragment>
-      <ToastManager config={toastConfig} />
+      <ToastManager config={toastConfig} useModal={false} />
     </GestureHandlerRootView>
   );
 };
@@ -2421,7 +2420,7 @@ const styles = StyleSheet.create({
   actionButtonGradient: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'flex-start',
+    justifyContent: 'center',
     paddingVertical: 12,
     paddingHorizontal: 12,
     borderWidth: 1,
@@ -2438,7 +2437,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     letterSpacing: -0.24,
     textTransform: 'capitalize',
-    flex: 1,
+    flexShrink: 1,
     flexWrap: 'nowrap'
   },
 
