@@ -4,7 +4,6 @@
 - lib folder
 - build folder
 
-
 -------------------- Install Everything new fresh start using npm --------------------
 - npm install / yarn
 - npm run clean / yarn clean

@@ -39,3 +39,9 @@ yarn add react-native-reanimated
 yarn add react-native-view-shot
 yarn add react-native-svg
 yarn add react-native-image-picker
+yarn add react-native-material-ripple
+yarn add react-native-device-info
+yarn add expo-audio
+
+4) : Prebuild Project :
+- npx expo prebuild
