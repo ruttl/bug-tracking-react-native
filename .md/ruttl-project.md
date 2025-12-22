@@ -10,14 +10,16 @@
 - npm run build / yarn build
 - npm pack / yarn pack
 
+-------------------- UPDATE FILES --------------------
+- cd android/build/src/main/java/expo/modules/mymodule
+- update MyModule.kt & ScreenRecordService.kt file
+- BugTracking.js & update assets folder
+- update import's of module in BugTracking.js file from index file as not default module
+
 -------------------- CONSUMER PROJECTS APP BUILD --------------------
 - cd android
 - ./gradlew assembleRelease
 - cp android/app/build/outputs/apk/release/app-release.apk ~/Desktop/
-
--------------------- UPDATE MODULE FILES --------------------
-- cd android/build/src/main/java/expo/modules/mymodule
-- update MyModule.kt & ScreenRecordService.kt file
 
 -------------------- CONSUMER INCRESED BUILD NUMBER --------------------
 - pnpm react-native-version --set-build 42 (SPECIFIC NUMBER)
