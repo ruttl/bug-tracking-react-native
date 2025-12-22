@@ -40,7 +40,6 @@ import { MyModuleJS } from "./index";
 import { useVideoPlayer, VideoView } from "expo-video";
 import { SafeAreaView } from "react-native-safe-area-context";
 import ToastManager, { Toast } from "toastify-react-native";
-import LottieView from "lottie-react-native";
 import { Video } from "react-native-compressor";
 import * as FileSystem from "expo-file-system/legacy";
 import LinearGradient from 'react-native-linear-gradient';
@@ -70,10 +69,9 @@ const ERROR_MESSAGE_TITLE = "Failed to capture this snapshot! Please retry";
 const MAX_MB = 10 * 1024 * 1024;
 
 let BUILD_NUMBER = "1";
-const NGROK = `https://3c89-2401-4900-8817-1fea-e454-c83e-45c8-4a00.ngrok-free.app/ruttlp/us-central1`;
 const PREVIEW_URL = `https://preview.ruttl.com/api/mobile`;
 const PRODUCTION_URL = `https://web.ruttl.com/api/mobile`;
-const BASE_URL = PRODUCTION_URL;
+const BASE_URL = PREVIEW_URL;
 
 const ToastStyle = ({ text1, text2, ...props }) => {
   return (
@@ -84,184 +82,15 @@ const ToastStyle = ({ text1, text2, ...props }) => {
   );
 };
 
-const OptionButton = ({ onPress, title }) => {
+const OptionButton = ({ onPress, title, image = require("./assets/plus.png"), style, textStyle, imageStyle }) => {
   return (
-    <TouchableOpacity style={styles.uploadButton} onPress={onPress}>
+    <TouchableOpacity style={[styles.uploadButton, style]} onPress={onPress}>
       <Image
-        source={require("./assets/plus.png")}
-        style={styles.uploadIcon}
+        source={image}
+        style={[styles.uploadIcon, imageStyle]}
       />
-      <Text style={styles.uploadText}>{title}</Text>
+      {title && <Text style={[styles.uploadText, textStyle]}>{title}</Text>}
     </TouchableOpacity>
-  );
-};
-
-const DraggableFab = ({
-  onScreenCapture,
-  onDragEnd,
-  initialX,
-  initialY,
-  isRecording,
-  startRecording,
-  stopRecording,
-  videoLoading
-}) => {
-  const x = useSharedValue(initialX);
-  const y = useSharedValue(initialY);
-  const [showOption, setShowOption] = useState(false);
-
-  const offsetX = useSharedValue(0);
-  const offsetY = useSharedValue(0);
-
-  const handlePress = () => {
-    if (isRecording) {
-      stopRecording?.();
-    } else {
-      setShowOption((prev) => !prev);
-    }
-  };
-
-  const startRecordingHandler = async () => {
-    setShowOption(false);
-    if (!isRecording) {
-      await startRecording();
-    } else {
-      await stopRecording?.();
-    }
-  };
-
-  const captureScreenshotHandler = () => {
-    setShowOption(false);
-    onScreenCapture?.();
-  };
-
-  const dragGesture = Gesture.Pan()
-    .onStart(() => {
-      offsetX.value = x.value;
-      offsetY.value = y.value;
-    })
-    .onUpdate((event) => {
-      const newX = offsetX.value + event.translationX;
-      const newY = offsetY.value + event.translationY;
-
-      x.value = Math.max(
-        PADDING,
-        Math.min(newX, SCREEN_WIDTH - BUTTON_SIZE - PADDING)
-      );
-      y.value = Math.max(
-        PADDING,
-        Math.min(newY, SCREEN_HEIGHT - BUTTON_SIZE - PADDING)
-      );
-    })
-    .onEnd(() => {
-      const snapX =
-        x.value < SCREEN_WIDTH / 2
-          ? PADDING
-          : SCREEN_WIDTH - BUTTON_SIZE - PADDING;
-      const snapY =
-        y.value < SCREEN_HEIGHT / 2
-          ? PADDING
-          : SCREEN_HEIGHT - BUTTON_SIZE - PADDING;
-
-      x.value = withTiming(snapX);
-      y.value = withTiming(snapY);
-
-      if (onDragEnd) {
-        runOnJS(onDragEnd)({ x: snapX, y: snapY });
-      }
-    });
-
-  const fabStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: x.value }, { translateY: y.value }],
-  }));
-
-  const directionStyle = useAnimatedStyle(() => {
-    const isLeft = x.value < SCREEN_WIDTH / 2;
-
-    return {
-      flexDirection: isLeft ? "row" : "row-reverse",
-      alignItems: "center",
-    };
-  }, [showOption]);
-
-  const uploadButtonStyle = useAnimatedStyle(() => {
-    const isTop = y.value < SCREEN_HEIGHT / 2;
-
-    return {
-      position: "absolute",
-      top: isTop ? BUTTON_SIZE : -BUTTON_SIZE - 46,
-      flexDirection: isTop ? "column" : "column-reverse",
-      rowGap: 10,
-    };
-  }, [showOption]);
-
-  useEffect(() => {
-    Image.resolveAssetSource(require("./assets/plus.png"));
-  }, []);
-
-  return (
-    <>
-      {showOption && (
-        <TouchableWithoutFeedback onPress={() => setShowOption(false)}>
-          <View
-            style={styles.backdrop}
-          />
-        </TouchableWithoutFeedback>
-      )}
-
-      <GestureDetector gesture={dragGesture}>
-        <Animated.View
-          style={[
-            {
-              position: "absolute",
-              pointerEvents: "box-none",
-              zIndex: Z_INDEX,
-            },
-            fabStyle,
-          ]}
-        >
-          <Animated.View style={directionStyle}>
-            {showOption && (
-              <Animated.View style={uploadButtonStyle}>
-                <OptionButton
-                  onPress={startRecordingHandler}
-                  title={isRecording ? "Stop Recording" : "Start Recording"}
-                />
-                <OptionButton
-                  onPress={captureScreenshotHandler}
-                  title={"Capture Screenshot"}
-                />
-              </Animated.View>
-            )}
-
-            <TouchableOpacity
-              activeOpacity={0.7}
-              delayPressOut={300}
-              style={styles.buttonContainer}
-              onLongPress={() => { }}
-              onPress={handlePress}
-            >
-              {videoLoading ? (
-                <ActivityIndicator size="small" color={"#000"} />
-              )
-                : isRecording ? (
-                  <LottieView
-                    source={require("./assets/live-pulse-animation.json")}
-                    autoPlay
-                    loop
-                    style={styles.lottie}
-                  />
-                ) : (
-                  <Image
-                    source={require("./assets/ruttl.png")}
-                    style={styles.ruttlIcon}
-                  />
-                )}
-            </TouchableOpacity>
-          </Animated.View>
-        </Animated.View>
-      </GestureDetector>
-    </>
   );
 };
 
@@ -325,7 +154,7 @@ const BottomPopupModal = ({ visible, onClose, children }) => {
     <View style={StyleSheet.absoluteFill}>
       <TouchableWithoutFeedback
         onPress={() => {
-          Keyboard.dismiss();   // also dismiss when tapping outside
+          Keyboard.dismiss();
           onClose();
         }}
       >
@@ -348,7 +177,6 @@ const BottomPopupModal = ({ visible, onClose, children }) => {
 };
 
 const GradientCircle = ({ text = '', size, style }) => {
-
   return (
     <LinearGradient
       colors={['#E2F0F8', '#FFEBF2']}
@@ -398,7 +226,7 @@ const AssigneeModal = ({ isOpen, closeHandler, selectedAssignees = [], onChangeA
   const toggleCheckBox = (item) => {
     if (!onChangeAssignees) return;
     const updated = [...selectedAssignees];
-    const index = updated.findIndex(a => a.uid === item.uid); // use uid
+    const index = updated.findIndex(a => a.uid === item.uid);
     if (index > -1) {
       updated.splice(index, 1);
     } else {
@@ -410,9 +238,7 @@ const AssigneeModal = ({ isOpen, closeHandler, selectedAssignees = [], onChangeA
   return (
     <BottomPopupModal visible={isOpen} onClose={closeHandler}>
       <View style={styles.modalContentContainer}>
-
         <View style={styles.dragHandle} />
-
         <Text style={styles.modalTitle}>Assignee</Text>
 
         <View style={styles.searchField}>
@@ -450,23 +276,18 @@ const AssigneeModal = ({ isOpen, closeHandler, selectedAssignees = [], onChangeA
                 );
               })
             ) : (
-              <Text
-                style={styles.noAssigneeText}
-              >
+              <Text style={styles.noAssigneeText}>
                 No assignee found
               </Text>
             )}
           </ScrollView>
         </View>
 
-        {/* Continue Button */}
         <TouchableOpacity
           style={styles.continueButton}
           onPress={closeHandler}
         >
-          <Text
-            style={styles.continueButtonText}
-          >
+          <Text style={styles.continueButtonText}>
             Continue
           </Text>
         </TouchableOpacity>
@@ -517,9 +338,7 @@ const DueDateModal = ({ isOpen, closeHandler, onDateSelect }) => {
           style={[styles.continueButton, styles.continueButtonMargin]}
           onPress={handleContinue}
         >
-          <Text
-            style={styles.continueButtonText}
-          >
+          <Text style={styles.continueButtonText}>
             Continue
           </Text>
         </TouchableOpacity>
@@ -545,7 +364,6 @@ const PriorityModal = ({ isOpen, closeHandler, onPrioritySelect }) => {
   return (
     <BottomPopupModal visible={isOpen} onClose={closeHandler}>
       <View style={styles.modalContentContainer}>
-
         <View style={styles.dragHandle} />
         <Text style={styles.modalTitle}>Priority</Text>
 
@@ -561,9 +379,7 @@ const PriorityModal = ({ isOpen, closeHandler, onPrioritySelect }) => {
                 onPress={() => togglePriority(item.id)}
                 style={[styles.priorityItem, { borderColor: selectedPriority === item.id ? "#6552FF" : "rgba(234, 234, 234, 0.2)" }]}
               >
-                <Text
-                  style={styles.priorityItemText}
-                >
+                <Text style={styles.priorityItemText}>
                   {item.label}
                 </Text>
                 {selectedPriority === item.id && (
@@ -577,14 +393,11 @@ const PriorityModal = ({ isOpen, closeHandler, onPrioritySelect }) => {
           </ScrollView>
         </View>
 
-        {/* Continue Button */}
         <TouchableOpacity
           style={styles.continueButton}
           onPress={closeHandler}
         >
-          <Text
-            style={styles.continueButtonText}
-          >
+          <Text style={styles.continueButtonText}>
             Continue
           </Text>
         </TouchableOpacity>
@@ -858,6 +671,71 @@ const InputScreen = ({
   )
 }
 
+const CommentInput = ({
+  comment,
+  toggleBottomNavigationView,
+  loading,
+  onSubmit,
+  error,
+  theme,
+  disabled,
+  buttonColor,
+  handleCommentChange
+}) => {
+
+  const textFieldPress = () => {
+    toggleBottomNavigationView()
+  }
+  return (
+    <View style={styles.commentContainer}>
+      <View style={styles.row}>
+        <TouchableOpacity
+          style={[
+            styles.inputWrapper,
+            { backgroundColor: theme?.background || "#000" },
+          ]}
+          onPress={textFieldPress}
+        >
+          <TextInput
+            style={[styles.singleTextInput, { color: theme?.text || "#000" }]}
+            value={comment}
+            onChangeText={handleCommentChange}
+            placeholder="Report the issue"
+            placeholderTextColor={(theme?.text || "#000") + "80"}
+          />
+          <View disabled={loading} id="open-sheet-button" style={styles.openSheetButton}>
+            <Image
+              resizeMode="cover"
+              source={require("./assets/chat-icon.png")}
+              style={styles.iconImage}
+            />
+          </View>
+        </TouchableOpacity>
+
+        <View style={styles.spacer8} />
+
+        <TouchableOpacity
+          disabled={loading || disabled}
+          style={[styles.rightIconContainer, { backgroundColor: buttonColor }]}
+          onPress={onSubmit}
+          id="add-comment-button"
+        >
+          {loading ? (
+            <ActivityIndicator color="#FFF" style={styles.activityIndicator} />
+          ) : (
+            <Text style={styles.addButtonStyle}>Add</Text>
+          )}
+        </TouchableOpacity>
+      </View>
+      {error && (
+        <Text style={[styles.errorText, styles.commentErrorText]}>
+          Please enter a comment before submitting
+        </Text>
+      )}
+    </View>
+  );
+};
+
 const PreviewScreen = ({ loading, src, videoUri, showImageUpload, onReset, setPaths, setExpanded, paths, withAnim, currentPath, exportRef, setCurrentPath, expanded, openImagePicker, player }) => {
   const viewRef = useRef();
   const activePointerId = useRef(null);
@@ -1001,7 +879,7 @@ const PreviewScreen = ({ loading, src, videoUri, showImageUpload, onReset, setPa
               rippleCentered
               disabled={loading}
               rippleColor="rgb(255, 251, 254)"
-              style={styles.iconButton}
+              style={{ justifyContent: "center" }}
               onPress={onUndo}
               id={"undo-button"}
             >
@@ -1128,68 +1006,373 @@ const PreviewScreen = ({ loading, src, videoUri, showImageUpload, onReset, setPa
   )
 }
 
-const CommentInput = ({
-  comment,
-  toggleBottomNavigationView,
-  loading,
-  onSubmit,
-  error,
-  theme,
-  disabled,
-  buttonColor,
-  handleCommentChange
+const DraggableFab = ({
+  onScreenCapture,
+  onDragEnd,
+  initialX,
+  initialY,
+  isRecording,
+  startRecording,
+  stopRecording,
+  videoLoading,
+  isLiveDrawing,
+  toggleLiveDrawing,
+  clearLiveCanvas,
+  toggleMic,
+  isMicOn,
+  formatDuration,
+  recordingDuration,
 }) => {
+  const x = useSharedValue(initialX);
+  const y = useSharedValue(initialY);
+  const [showOption, setShowOption] = useState(false);
 
-  const textFieldPress = () => {
-    toggleBottomNavigationView()
-  }
-  return (
-    <View style={styles.commentContainer}>
-      <View style={styles.row}>
-        <TouchableOpacity
-          style={[
-            styles.inputWrapper,
-            { backgroundColor: theme?.background || "#000" },
-          ]}
-          onPress={textFieldPress}
+  const offsetX = useSharedValue(0);
+  const offsetY = useSharedValue(0);
+
+  const barOffsetX = useSharedValue(0);
+  const barOffsetY = useSharedValue(0);
+  const barContext = useSharedValue({ x: 0, y: 0 });
+  const barWidth = useSharedValue(0);
+  const barHeight = useSharedValue(0);
+
+  const handlePress = () => {
+    if (isRecording) {
+      stopRecording?.();
+    } else {
+      setShowOption((prev) => !prev);
+    }
+  };
+
+  const startRecordingHandler = async () => {
+    setShowOption(false);
+    if (!isRecording) {
+      await startRecording();
+    } else {
+      await stopRecording?.();
+    }
+  };
+
+  const captureScreenshotHandler = () => {
+    setShowOption(false);
+    onScreenCapture?.();
+  };
+
+  const barDragGesture = Gesture.Pan()
+    .onStart(() => {
+      barContext.value = { x: barOffsetX.value, y: barOffsetY.value };
+    })
+    .onUpdate((event) => {
+      const proposedX = barContext.value.x + event.translationX;
+      const proposedY = barContext.value.y + event.translationY;
+
+      // Start positions (centered horizontally, bottom 50)
+      const startX = (SCREEN_WIDTH - barWidth.value) / 2;
+      const startY = SCREEN_HEIGHT - 50 - barHeight.value;
+
+      // Constraint logic: 
+      // Min Translate X = -startX (Left Edge)
+      // Max Translate X = startX (Right Edge)
+      // Min Translate Y = -startY (Top Edge)
+      // Max Translate Y = 50 (Bottom Edge)
+
+      barOffsetX.value = Math.min(Math.max(proposedX, -startX), startX);
+      barOffsetY.value = Math.min(Math.max(proposedY, -(startY - 50)), 10);
+    })
+    .onEnd(() => {
+      // Optional: Implement boundary checks or snapping if needed
+    });
+
+  const dragGesture = Gesture.Pan()
+    .onStart(() => {
+      offsetX.value = x.value;
+      offsetY.value = y.value;
+    })
+    .onUpdate((event) => {
+      const newX = offsetX.value + event.translationX;
+      const newY = offsetY.value + event.translationY;
+
+      x.value = Math.max(
+        PADDING,
+        Math.min(newX, SCREEN_WIDTH - BUTTON_SIZE - PADDING)
+      );
+      y.value = Math.max(
+        PADDING,
+        Math.min(newY, SCREEN_HEIGHT - BUTTON_SIZE - PADDING)
+      );
+    })
+    .onEnd(() => {
+      const snapX =
+        x.value < SCREEN_WIDTH / 2
+          ? PADDING
+          : SCREEN_WIDTH - BUTTON_SIZE - PADDING;
+      const snapY =
+        y.value < SCREEN_HEIGHT / 2
+          ? PADDING
+          : SCREEN_HEIGHT - BUTTON_SIZE - PADDING;
+
+      x.value = withTiming(snapX);
+      y.value = withTiming(snapY);
+
+      if (onDragEnd) {
+        runOnJS(onDragEnd)({ x: snapX, y: snapY });
+      }
+    });
+
+  const fabStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: x.value }, { translateY: y.value }],
+  }));
+
+  const barStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateX: barOffsetX.value },
+      { translateY: barOffsetY.value },
+    ],
+  }));
+
+  const directionStyle = useAnimatedStyle(() => {
+    const isLeft = x.value < SCREEN_WIDTH / 2;
+
+    return {
+      flexDirection: isLeft ? "row" : "row-reverse",
+      alignItems: "center",
+    };
+  }, [showOption]);
+
+  const optionMenuStyle = useAnimatedStyle(() => {
+    const isTop = y.value < SCREEN_HEIGHT / 2;
+    return {
+      position: "absolute",
+      top: isTop ? BUTTON_SIZE : -BUTTON_SIZE - 46,
+      flexDirection: isTop ? "column" : "column-reverse",
+      rowGap: 10,
+    };
+  }, [showOption]);
+
+  const optionButtonStyle = useAnimatedStyle(() => {
+    const isTop = y.value < SCREEN_HEIGHT / 2;
+    return {
+      position: "absolute",
+      top: isTop ? BUTTON_SIZE : -BUTTON_SIZE - (-10),
+      flexDirection: isTop ? "column" : "column-reverse",
+      rowGap: 10,
+      columnGap: 20
+    };
+  }, [showOption]);
+
+  useEffect(() => {
+    Image.resolveAssetSource(require("./assets/plus.png"));
+  }, []);
+
+  useEffect(() => {
+    if (isRecording) {
+      barOffsetX.value = 0;
+      barOffsetY.value = 0;
+    }
+  }, [isRecording]);
+
+  if (isRecording) {
+    return (
+      <View style={styles.overlay} pointerEvents="box-none">
+        {/* top view */}
+        {/* <View style={styles.recordingIndicatorContainer}>
+                    <View style={styles.recordingDotContainer}>
+                        <View style={styles.recordingDot} />
+                    </View>
+
+                    <Text style={styles.recordingTimerText}>
+                        Recording Video ({formatDuration(recordingDuration)})
+                    </Text>
+                </View> */}
+
+        {/* bottom view */}
+        <Animated.View
+          onLayout={(e) => {
+            barWidth.value = e.nativeEvent.layout.width;
+            barHeight.value = e.nativeEvent.layout.height;
+          }}
+          style={[styles.toolbarWrapper, barStyle]}
         >
-          <TextInput
-            style={[styles.singleTextInput, { color: theme?.text || "#000" }]}
-            value={comment}
-            onChangeText={handleCommentChange}
-            placeholder="Report the issue"
-            placeholderTextColor={(theme?.text || "#000") + "80"} // adds opacity
-          />
-          <View disabled={loading} id="open-sheet-button" style={styles.openSheetButton}>
-            <Image
-              resizeMode="cover"
-              source={require("./assets/chat-icon.png")}
-              style={styles.iconImage}
-            />
+          <View style={styles.toolbarContent}>
+            <GestureDetector gesture={barDragGesture}>
+              <View style={{ paddingVertical: 10 }}>
+                <Image source={require('./assets/drag-icon.png')} style={styles.icon} />
+              </View>
+            </GestureDetector>
+
+            <TouchableOpacity onPress={toggleLiveDrawing}>
+              {isLiveDrawing ? (
+                <LinearGradient
+                  colors={['#E2F0F8', '#FFEBF2']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.iconButtonGradient}
+                >
+                  <Image source={require('./assets/red-pencil.png')} style={styles.icon} />
+                </LinearGradient>
+              ) : (
+                <View style={styles.iconButton}>
+                  <Image source={require('./assets/red-pencil.png')} style={styles.icon} />
+                </View>
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.iconButton} onPress={toggleMic}>
+              {isMicOn ? (
+                <LinearGradient
+                  colors={['#E2F0F8', '#FFEBF2']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.iconButtonGradient}
+                >
+                  <Image source={require('./assets/mic.png')} style={styles.icon} />
+                </LinearGradient>
+              ) : (
+                <View style={styles.iconButton}>
+                  <Image source={require('./assets/mic.png')} style={styles.icon} />
+                </View>
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.stopButton} onPress={stopRecording}>
+              <Text style={styles.stopText}>STOP</Text>
+            </TouchableOpacity>
           </View>
-        </TouchableOpacity>
+        </Animated.View>
+      </View >
+    )
+  }
 
-        <View style={styles.spacer8} />
-
-        <TouchableOpacity
-          disabled={loading || disabled}
-          style={[styles.rightIconContainer, { backgroundColor: buttonColor }]}
-          onPress={onSubmit}
-          id="add-comment-button"
-        >
-          {loading ? (
-            <ActivityIndicator color="#FFF" style={styles.activityIndicator} />
-          ) : (
-            <Text style={styles.addButtonStyle}>Add</Text>
-          )}
-        </TouchableOpacity>
-      </View>
-      {error && (
-        <Text style={[styles.errorText, styles.commentErrorText]}>
-          Please enter a comment before submitting
-        </Text>
+  return (
+    <>
+      {showOption && (
+        <TouchableWithoutFeedback onPress={() => setShowOption(false)}>
+          <View
+            style={styles.backdrop}
+          />
+        </TouchableWithoutFeedback>
       )}
-    </View>
+
+      <GestureDetector gesture={dragGesture}>
+        <Animated.View
+          style={[
+            {
+              position: "absolute",
+              pointerEvents: "box-none",
+              zIndex: Z_INDEX,
+            },
+            fabStyle,
+          ]}
+        >
+          <Animated.View style={directionStyle}>
+            {showOption && (
+              <Animated.View style={optionMenuStyle}>
+                <OptionButton
+                  onPress={startRecordingHandler}
+                  title={isRecording ? "Stop Recording" : "Start Recording"}
+                />
+                <OptionButton
+                  onPress={captureScreenshotHandler}
+                  title={"Capture Screenshot"}
+                />
+              </Animated.View>
+            )}
+
+            {isRecording && (
+              <Animated.View style={optionButtonStyle}>
+                <OptionButton
+                  onPress={toggleLiveDrawing}
+                  image={require('./assets/pencil.png')}
+                  style={isLiveDrawing ? { backgroundColor: '#6552FF' } : {}}
+                  textStyle={isLiveDrawing ? { color: '#FFF' } : {}}
+                  imageStyle={isLiveDrawing ? { tintColor: '#FFF' } : {}}
+                />
+              </Animated.View>
+            )}
+
+            <TouchableOpacity
+              activeOpacity={0.7}
+              delayPressOut={300}
+              style={styles.buttonContainer}
+              onLongPress={() => { }}
+              onPress={handlePress}
+            >
+              {videoLoading ? (<ActivityIndicator size="small" color={"#000"} />)
+                : (<Image
+                  source={require("./assets/ruttl.png")}
+                  style={styles.ruttlIcon}
+                />)}
+            </TouchableOpacity>
+          </Animated.View>
+        </Animated.View>
+      </GestureDetector>
+    </>
+  );
+};
+
+const LiveDrawingOverlay = ({
+  isDrawing,
+  paths,
+  currentPath,
+  onDrawStart,
+  onDrawMove,
+  onDrawEnd,
+}) => {
+  if (!isDrawing && paths.length === 0 && currentPath.length === 0) return null;
+
+  const pan = Gesture.Pan()
+    .enabled(isDrawing) // Only active when isDrawing is true
+    .minDistance(1) // Capture even small movements immediately
+    .maxPointers(1) // Single finger drawing only
+    .averageTouches(false)
+    .onStart((e) => {
+      // Call the parent function on the JS thread
+      runOnJS(onDrawStart)(e.x, e.y);
+    })
+    .onUpdate((e) => {
+      runOnJS(onDrawMove)(e.x, e.y);
+    })
+    .onEnd(() => {
+      runOnJS(onDrawEnd)();
+    });
+
+  return (
+    <GestureDetector gesture={pan}>
+      <Animated.View
+        style={[
+          StyleSheet.absoluteFill,
+          {
+            zIndex: isDrawing ? Z_INDEX - 2 : Z_INDEX - 1,
+            backgroundColor: 'transparent',
+          }
+        ]}
+        pointerEvents={isDrawing ? "auto" : "none"}
+      >
+        <Svg height={SCREEN_HEIGHT} width={SCREEN_WIDTH} style={StyleSheet.absoluteFill}>
+          {paths.map(({ color, data, id }, index) => (
+            <Path
+              key={id || `path-${index}`}
+              d={data.join("")}
+              fill={"transparent"}
+              stroke={color || "#FF4F6D"}
+              strokeLinecap={"round"}
+              strokeLinejoin={"round"}
+              strokeWidth={4}
+            />
+          ))}
+          {currentPath.length > 0 && (
+            <Path
+              d={currentPath.join("")}
+              fill={"transparent"}
+              stroke={"#FF4F6D"}
+              strokeLinecap={"round"}
+              strokeLinejoin={"round"}
+              strokeWidth={4}
+            />
+          )}
+        </Svg>
+      </Animated.View>
+    </GestureDetector>
   );
 };
 
@@ -1205,6 +1388,7 @@ export const BugTracking = ({ projectID = "", token = "" }) => {
   }
 
   const exportRef = useRef();
+  const liveDrawingTimeoutRef = useRef(null);
   const isCapturing = useRef(false);
   const [comment, setComment] = useState("");
   const [description, setDescription] = useState("");
@@ -1229,14 +1413,48 @@ export const BugTracking = ({ projectID = "", token = "" }) => {
   const player = useVideoPlayer(null);
   const [showAudioPermissionModal, setShowAudioPermissionModal] = useState(false);
 
+  // Live Drawing State
+  const [isLiveDrawing, setIsLiveDrawing] = useState(false);
+  const [livePaths, setLivePaths] = useState([]);
+  const [currentLivePath, setCurrentLivePath] = useState([]);
+  const lastLiveTouch = useRef([-1, -1]);
+
   const [selectedAssignees, setSelectedAssignees] = useState([]);
   const [selectedDueDate, setSelectedDueDate] = useState(null);
   const [selectedPriority, setSelectedPriority] = useState(null);
+  const [isMicOn, setIsMicOn] = useState(true);
+  const [recordingDuration, setRecordingDuration] = useState(0);
   const audioPlayer = useAudioPlayer(require('./assets/start-audio.mp3'));
+
+  useEffect(() => {
+    let interval;
+    if (isRecording) {
+      interval = setInterval(() => {
+        setRecordingDuration((prev) => prev + 1);
+      }, 1000);
+    } else {
+      setRecordingDuration(0);
+    }
+    return () => clearInterval(interval);
+  }, [isRecording]);
+
+  const formatDuration = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+  };
 
   const playSound = () => {
     audioPlayer.seekTo(0.5);
     audioPlayer.play();
+  };
+
+  const toggleMic = () => {
+    setIsMicOn((prev) => {
+      const newState = !prev;
+      MyModuleJS.setAudioEnabled(newState);
+      return newState;
+    });
   };
 
   const handleAudioPermissionSettings = async () => {
@@ -1250,12 +1468,9 @@ export const BugTracking = ({ projectID = "", token = "" }) => {
     if (granted) {
       playSound();
       try {
+        await MyModuleJS.setAudioEnabled(isMicOn);
         const isStarted = await MyModuleJS.startRecordingService();
-        if (isStarted) {
-          setIsRecording(true);
-        } else {
-          setIsRecording(false);
-        }
+        setIsRecording(isStarted);
       } catch (e) {
         console.error("❌ Start recording error:", e);
         setIsRecording(false);
@@ -1290,6 +1505,15 @@ export const BugTracking = ({ projectID = "", token = "" }) => {
     setSelectedDueDate(null);
     setSelectedPriority(null);
     setbtmSheetVisible(false);
+
+    // Reset Live Drawing
+    setIsLiveDrawing(false);
+    setLivePaths([]);
+    setCurrentLivePath([]);
+    setIsMicOn(true);
+    setIsRecording(false);
+    setRecordingDuration(0);
+
   };
 
   const onScreenCapture = async () => {
@@ -1315,6 +1539,61 @@ export const BugTracking = ({ projectID = "", token = "" }) => {
     } finally {
       isCapturing.current = false;
     }
+  };
+
+  const onGestureStart = (x, y) => {
+    if (liveDrawingTimeoutRef.current) {
+      clearTimeout(liveDrawingTimeoutRef.current);
+      liveDrawingTimeoutRef.current = null;
+    }
+
+    lastLiveTouch.current = [x, y];
+    const startPoint = `M${x.toFixed(0)},${y.toFixed(0)} `;
+    setCurrentLivePath([startPoint]);
+  };
+
+  const onGestureUpdate = (x, y) => {
+    const [lastX, lastY] = lastLiveTouch.current;
+    if (Math.abs(x - lastX) > 2 || Math.abs(y - lastY) > 2) {
+      const newPoint = `${x.toFixed(0)},${y.toFixed(0)} `;
+      setCurrentLivePath((prev) => [...prev, newPoint]);
+      lastLiveTouch.current = [x, y];
+    }
+  };
+
+  const onGestureEnd = () => {
+    if (currentLivePath.length > 0) {
+      setLivePaths((prev) => [
+        ...prev,
+        { color: "#FF4F6D", data: [...currentLivePath] }
+      ]);
+      setCurrentLivePath([]);
+    }
+
+    if (liveDrawingTimeoutRef.current) clearTimeout(liveDrawingTimeoutRef.current);
+
+    liveDrawingTimeoutRef.current = setTimeout(() => {
+      setLivePaths([]);
+      setCurrentLivePath([]);
+    }, 3000);
+  };
+
+  const toggleLiveDrawing = () => {
+    setIsLiveDrawing((prev) => {
+      const newState = !prev;
+      if (!newState) {
+        if (liveDrawingTimeoutRef.current) clearTimeout(liveDrawingTimeoutRef.current);
+        setLivePaths([]);
+        setCurrentLivePath([]);
+      }
+      return newState;
+    });
+  };
+
+  const clearLiveCanvas = () => {
+    if (liveDrawingTimeoutRef.current) clearTimeout(liveDrawingTimeoutRef.current);
+    setLivePaths([]);
+    setCurrentLivePath([]);
   };
 
   const openImagePicker = () => {
@@ -1680,9 +1959,11 @@ export const BugTracking = ({ projectID = "", token = "" }) => {
       if (granted) {
         playSound();
         try {
+          await MyModuleJS.setAudioEnabled(isMicOn);
           const isStarted = await MyModuleJS.startRecordingService();
           if (isStarted) {
             setIsRecording(true);
+            clearLiveCanvas();
           } else {
             setIsRecording(false);
           }
@@ -1701,6 +1982,10 @@ export const BugTracking = ({ projectID = "", token = "" }) => {
       const result = await MyModuleJS.stopRecording();
       setVideoLoading(true);
       setIsRecording(false);
+
+      // Turn off drawing mode when stopping
+      setIsLiveDrawing(false);
+
       if (result?.uri) {
         const info = await FileSystem.getInfoAsync(result.uri);
         if (!info.exists || info.size < 1000) {
@@ -1810,6 +2095,8 @@ export const BugTracking = ({ projectID = "", token = "" }) => {
 
         if (!stillRecording && recorded) {
           setIsRecording(false);
+          // Native auto-stop logic
+          setIsLiveDrawing(false);
           const info = await MyModuleJS.getLatestVideoInfo();
 
           if (info?.uri) {
@@ -1845,6 +2132,17 @@ export const BugTracking = ({ projectID = "", token = "" }) => {
     return () => clearTimeout(timer);
   }, []);
 
+  useEffect(() => {
+    if (!isRecording) return;
+    if (currentLivePath.length === 0 && livePaths.length > 0) {
+      const timeout = setTimeout(() => {
+        setLivePaths([]);
+      }, 2000);
+
+      return () => clearTimeout(timeout);
+    }
+  }, [livePaths, currentLivePath, isRecording]);
+
 
   return (
     <GestureHandlerRootView style={styles.mainContainer}>
@@ -1855,6 +2153,19 @@ export const BugTracking = ({ projectID = "", token = "" }) => {
           onOpenSettings={handleAudioPermissionSettings}
           onContinueWithoutAudio={handleContinueWithoutAudio}
         />
+
+        {/* LIVE DRAWING LAYER */}
+        {isRecording && (
+          <LiveDrawingOverlay
+            isDrawing={isLiveDrawing}
+            paths={livePaths}
+            currentPath={currentLivePath}
+            onDrawStart={onGestureStart}
+            onDrawMove={onGestureUpdate}
+            onDrawEnd={onGestureEnd}
+          />
+        )}
+
         {widgetVisible && !src ? (
           <DraggableFab
             initialX={fabPos.x}
@@ -1867,6 +2178,13 @@ export const BugTracking = ({ projectID = "", token = "" }) => {
             stopRecording={stopRecording}
             isRecording={isRecording}
             videoLoading={videoLoading}
+            isLiveDrawing={isLiveDrawing}
+            toggleLiveDrawing={toggleLiveDrawing}
+            clearLiveCanvas={clearLiveCanvas}
+            toggleMic={toggleMic}
+            isMicOn={isMicOn}
+            recordingDuration={recordingDuration}
+            formatDuration={formatDuration}
           />
         ) : (
           <StatusBar backgroundColor={"#000"}></StatusBar>
@@ -1905,8 +2223,7 @@ export const BugTracking = ({ projectID = "", token = "" }) => {
                 />
                 <KeyboardAvoidingView
                   behavior={Platform.OS === "ios" ? "padding" : "height"}
-                  style={styles.footerContainer}
-                >
+                  style={styles.footerContainer}>
                   <CommentInput
                     buttonColor={buttonColor}
                     comment={comment}
@@ -2521,6 +2838,115 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 24,
     alignItems: 'center',
+  },
+
+  overlay: {
+    width: SCREEN_WIDTH,
+    height: SCREEN_HEIGHT,
+    position: 'absolute',
+    zIndex: Z_INDEX,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  toolbarWrapper: {
+    height: 56,
+    position: 'absolute',
+    bottom: 50,
+    borderRadius: 56,
+    borderWidth: 1,
+    borderColor: 'rgba(20, 7, 67, 0.1)',
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  toolbarContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    columnGap: 16,
+  },
+
+  iconButtonGradient: {
+    width: 40,
+    height: 40,
+    borderRadius: 38.57,
+    borderWidth: 0.71,
+    borderColor: 'rgba(20, 7, 67, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  iconButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 38.57,
+    borderWidth: 0.71,
+    borderColor: 'rgba(20, 7, 67, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+  },
+
+  stopButton: {
+    width: 57.86,
+    height: 40,
+    borderRadius: 38.57,
+    borderWidth: 0.71,
+    borderColor: '#E54D53',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#FC5555',
+  },
+
+  stopText: {
+    fontWeight: '600',
+    fontSize: 12.86,
+    lineHeight: 12.86,
+    letterSpacing: 0,
+    color: '#FFFFFF',
+  },
+
+  icon: {
+    width: 17,
+    height: 17,
+  },
+  recordingIndicatorContainer: {
+    top: 50,
+    display: "flex",
+    paddingVertical: 8,
+    paddingHorizontal: 11.429,
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 5.714,
+    borderRadius: 38.57,
+    borderWidth: 0.714,
+    borderColor: '#E54D53',
+    backgroundColor: '#FC5555',
+    flexDirection: 'row',
+    position: "absolute"
+  },
+  recordingDotContainer: {
+    width: 14,
+    height: 14,
+    borderRadius: 12,
+    backgroundColor: "#FFFFFF66",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  recordingDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 5,
+    backgroundColor: "#FFF",
+  },
+  recordingTimerText: {
+    color: "#FFF",
+    fontSize: 10,
+    fontWeight: "600",
+    lineHeight: 10,
   },
 });
 

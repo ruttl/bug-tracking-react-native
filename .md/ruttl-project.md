@@ -15,6 +15,10 @@
 - ./gradlew assembleRelease
 - cp android/app/build/outputs/apk/release/app-release.apk ~/Desktop/
 
+-------------------- UPDATE MODULE FILES --------------------
+- cd android/build/src/main/java/expo/modules/mymodule
+- update MyModule.kt & ScreenRecordService.kt file
+
 -------------------- CONSUMER INCRESED BUILD NUMBER --------------------
 - pnpm react-native-version --set-build 42 (SPECIFIC NUMBER)
 
