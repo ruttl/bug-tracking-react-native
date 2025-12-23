@@ -71,7 +71,7 @@ const MAX_MB = 10 * 1024 * 1024;
 let BUILD_NUMBER = "1";
 const PREVIEW_URL = `https://preview.ruttl.com/api/mobile`;
 const PRODUCTION_URL = `https://web.ruttl.com/api/mobile`;
-const BASE_URL = PREVIEW_URL;
+const BASE_URL = PRODUCTION_URL;
 
 const ToastStyle = ({ text1, text2, ...props }) => {
   return (
