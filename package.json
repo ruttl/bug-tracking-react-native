@@ -5,6 +5,9 @@
   "main": "lib/commonjs/index.js",
   "module": "lib/module/index.js",
   "types": "lib/typescript/src/index.d.ts",
+  "publishConfig": {
+    "access": "public"
+  },
   "files": [
     "src",
     "lib",
