@@ -1,0 +1,6 @@
+[
+    {
+        "merged": "expo.modules.mymodule.my-module-release-30:/xml/rn_dev_preferences.xml",
+        "source": "expo.modules.mymodule.my-module-react-android-0.79.5-release-4:/xml/rn_dev_preferences.xml"
+    }
+]

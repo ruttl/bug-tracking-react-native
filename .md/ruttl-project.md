@@ -4,15 +4,17 @@
 - lib folder
 - build folder
 
-
 -------------------- Install Everything new fresh start using npm --------------------
 - npm install / yarn
 - npm run clean / yarn clean
 - npm run build / yarn build
 - npm pack / yarn pack
 
--------------------- CONSUMER PROJECTS TODO --------------------
-- yarn cache clean @ruttl/bug-tracking
+-------------------- UPDATE FILES --------------------
+- cd android/build/src/main/java/expo/modules/mymodule
+- update MyModule.kt & ScreenRecordService.kt file
+- BugTracking.js & update assets folder
+- update import's of module in BugTracking.js file from index file as not default module
 
 -------------------- CONSUMER PROJECTS APP BUILD --------------------
 - cd android
@@ -29,3 +31,6 @@
 - npm login (IF NOT LOGIN)
 - npm whoami (CHECK LOGIN USER)
 - npm publish --access public (PUSH CHANGES)
+
+-------------------- CONSUMER PROJECTS TODO --------------------
+- yarn cache clean @ruttl/bug-tracking

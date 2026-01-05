@@ -1,20 +1,30 @@
 {
   "name": "@ruttl/bug-tracking",
-  "version": "1.1.22",
+  "version": "2.0.0",
   "description": "React Native plugin for bug tracking via Ruttl",
   "main": "lib/commonjs/index.js",
   "module": "lib/module/index.js",
-  "source": "src/index.js",
-  "types": "lib/types/commonjs/index.d.ts",
-  "react-native": "src/index.js",
+  "types": "lib/typescript/src/index.d.ts",
+  "publishConfig": {
+    "access": "public"
+  },
   "files": [
-    "lib/",
-    "src/"
+    "src",
+    "lib",
+    "!**/__tests__",
+    "!**/__fixtures__",
+    "!**/__mocks__",
+    "android",
+    "ios",
+    "app.plugin.js",
+    "expo-module.config.json",
+    "package.json"
   ],
   "scripts": {
     "build": "npm run clean && bob build",
     "clean": "rimraf lib",
-    "prepare": "npm run build"
+    "prepare": "npm run build",
+    "prepack": "bob build"
   },
   "keywords": [
     "ruttl",
@@ -24,42 +34,18 @@
   "bugs": "https://github.com/ruttl/bug-tracking-react-native/issues",
   "homepage": "https://ruttl.com/mobile-app-feedback/",
   "license": "ISC",
-  "react-native-builder-bob": {
-    "source": "src",
-    "output": "lib",
-    "targets": [
-      [
-        "commonjs",
-        {
-          "copyFlow": false,
-          "sourceMaps": false
-        }
-      ],
-      [
-        "module",
-        {
-          "sourceMaps": false
-        }
-      ]
-    ]
-  },
-  "devDependencies": {
-    "prettier": "^3.2.5",
-    "react": "^18.2.0",
-    "react-native": "^0.74.2",
-    "react-native-builder-bob": "^0.20.4",
-    "rimraf": "^5.0.10"
-  },
   "peerDependencies": {
+    "expo": ">=50.0.0",
+    "expo-modules-core": ">=1.11.0",
     "react": ">=18.0.0",
     "react-native": ">=0.71.0",
     "react-native-btr": "^2.3.0",
     "react-native-device-info": "^14.0.4",
-    "react-native-gesture-handler": "^2.14.1",
     "react-native-draggable": "^3.3.0",
+    "react-native-gesture-handler": "^2.14.1",
     "react-native-image-picker": "^9.0.0",
     "react-native-material-ripple": "^0.9.1",
-    "react-native-reanimated": "^3.20.1",
+    "react-native-reanimated": "~3.17.5",
     "react-native-safe-area-context": "^5.5.2",
     "react-native-screens": "^4.18.1",
     "react-native-svg": "^15.13.0",
@@ -67,9 +53,39 @@
   },
   "dependencies": {
     "axios": "^1.6.8",
+    "expo-constants": "^18.0.10",
+    "expo-file-system": "^19.0.19",
+    "expo-video": "^3.0.14",
+    "lottie-react-native": "^7.3.4",
     "prop-types": "^15.8.1",
-    "react-native-draggable": "^3.3.0",
-    "react-native-toast-message": "^2.2.0"
+    "react-native-calendars": "^1.1313.0",
+    "react-native-compressor": "^1.13.0",
+    "react-native-linear-gradient": "^2.8.3",
+    "toastify-react-native": "^7.2.3"
+  },
+  "devDependencies": {
+    "expo-module-scripts": "^5.0.7",
+    "expo-modules-autolinking": "^3.0.21",
+    "expo-modules-core": "^3.0.25",
+    "react": "^18.2.0",
+    "react-native": "^0.74.2",
+    "react-native-builder-bob": "^0.20.4",
+    "rimraf": "^5.0.10"
+  },
+  "expo": {
+    "plugins": [
+      "./app.plugin.js"
+    ]
+  },
+  "react-native": "src/index.js",
+  "react-native-builder-bob": {
+    "source": "src",
+    "output": "lib",
+    "targets": [
+      "commonjs",
+      "module",
+      "typescript"
+    ]
   },
   "eslintIgnore": [
     "node_modules/",
