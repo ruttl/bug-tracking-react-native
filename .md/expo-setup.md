@@ -1,8 +1,8 @@
-CREATE PROJECT :  npx create-expo-app@latest --template blank
+CREATE PROJECT : npx create-expo-app@latest --template blank
 
+---
 
-----------------------------
-1) :  import Plugin at root file with wrapping of gesture handler : 
+1. : import Plugin at root file with wrapping of gesture handler :
 
 import { BugTracking } from "@ruttl/bug-tracking";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
@@ -16,23 +16,24 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
     ..........
      [CODE]
     ..........
+
 <GestureHandlerRootView>
 
+---
 
-----------------------------
-2) : add plugin into babel.config.js file  : 
+2. : add plugin into babel.config.js file :
 
 module.exports = function (api) {
- api.cache(true);
- return {
-   presets: ["babel-preset-expo"],
-   plugins: ["react-native-reanimated/plugin"],  		//ADD LAST 
- };
+api.cache(true);
+return {
+presets: ["babel-preset-expo"],
+plugins: ["react-native-reanimated/plugin"], //ADD LAST
+};
 };
 
+---
 
-----------------------------
-3) : Install required Library :
+3. : Install required Library :
 
 yarn add react-native-gesture-handler
 yarn add react-native-reanimated
@@ -42,6 +43,13 @@ yarn add react-native-image-picker
 yarn add react-native-material-ripple
 yarn add react-native-device-info
 yarn add expo-audio
+yarn add expo-video
+yarn add lottie-react-native
+yarn add react-native-btr
+yarn add react-native-calendars
+yarn add react-native-draggable
+yarn add toastify-react-native
 
-4) : Prebuild Project :
+4. : Prebuild Project :
+
 - npx expo prebuild
