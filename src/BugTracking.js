@@ -2502,7 +2502,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   scrollView: { flex: 1, backgroundColor: "#1F1F1F", borderRadius: 20 },
-  videoView: { height: "100%", width: "100%" },
+  videoView: { height: height, width: width, borderRadius: 16 },
   emptyImage: { height: 70, width: 102 },
   uploadPlusIcon: { height: 24, width: 24 },
   activityIndicatorCenter: { alignSelf: "center" },
