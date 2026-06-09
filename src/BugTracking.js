@@ -686,13 +686,13 @@ const PreviewScreen = ({ loading, src, videoUri, showImageUpload, onReset, setPa
   const [isTouch, setTouch] = useState(false);
 
   useEffect(() => {
-    if (videoUri && player) {
-      setTimeout(() => {
-        player.replace(videoUri);
-        player.loop = false;
-        player.play();
-      }, 100);
-    }
+    if (!videoUri || !player) return;
+    const timer = setTimeout(() => {
+      player.replace({ uri: videoUri });
+      player.loop = false;
+      player.play();
+    }, 500);
+    return () => clearTimeout(timer);
   }, [videoUri, player]);
 
   const pageLoaded = useMemo(() => {
@@ -1937,6 +1937,7 @@ export const BugTracking = ({ projectID = "", token = "" }) => {
         }
         setVideoUri(result.uri);
         setVisible(true);
+        setWidgetVisible(false);
         setVideoLoading(false);
       } else {
         setVideoLoading(false)
@@ -2045,6 +2046,7 @@ export const BugTracking = ({ projectID = "", token = "" }) => {
             console.log("Native auto-stop:", info);
             setVideoUri(info.uri);
             setVisible(true);
+            setWidgetVisible(false);
             setVideoLoading(false);
           }
         }
