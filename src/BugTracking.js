@@ -590,61 +590,8 @@ const InputScreen = ({
               </View>
             )}
 
-            <TextInput
-              ref={descriptionRef}
-              multiline
-              numberOfLines={10}
-              style={[
-                styles.bottomSheetTextInput,
-                styles.inputScreenDescription,
-              ]}
-              keyboardType="name-phone-pad"
-              placeholder="Add issue description (optional)"
-              placeholderTextColor="#FFFFFF4D"
-              value={description}
-              onChangeText={setDescription}
-              id="comment-description-input"
-            />
           </View>
 
-          <View style={styles.bottomActionBar}>
-            <ActionButton
-              icon={require("./assets/priority.png")}
-              iconBgColor={priorityButtonColor}
-              text={selectedPriority || "Priority"}
-              onPress={openPriorityModal}
-            />
-            <ActionButton
-              icon={require("./assets/date.png")}
-              text={dueDateDisplay}
-              iconBgColor={null}
-              onPress={openDueDateModal}
-            />
-            <ActionButton
-              icon={require("./assets/assignee.png")}
-              text={assigneeButtonTitle || "Assignee"}
-              iconBgColor={null}
-              onPress={openAssigneeModal}
-              showNameImage={true}
-              startIcon={
-                selectedAssignees?.length > 0 ? (
-                  <View style={{ flexDirection: "row" }}>
-                    {selectedAssignees.slice(0, 2).map((u, i) => (
-                      <GradientCircle
-                        key={i}
-                        text={u.displayName?.charAt(0).toUpperCase()}
-                        size={20}
-                        style={{
-                          marginLeft: i > 0 ? -8 : 0,
-                          zIndex: i
-                        }}
-                      />
-                    ))}
-                  </View>
-                ) : null
-              }
-            />
-          </View>
         </View>
       </TouchableWithoutFeedback>
 
@@ -673,7 +620,6 @@ const InputScreen = ({
 
 const CommentInput = ({
   comment,
-  toggleBottomNavigationView,
   loading,
   onSubmit,
   error,
@@ -682,19 +628,14 @@ const CommentInput = ({
   buttonColor,
   handleCommentChange
 }) => {
-
-  const textFieldPress = () => {
-    toggleBottomNavigationView()
-  }
   return (
     <View style={styles.commentContainer}>
       <View style={styles.row}>
-        <TouchableOpacity
+        <View
           style={[
             styles.inputWrapper,
             { backgroundColor: theme?.background || "#000" },
           ]}
-          onPress={textFieldPress}
         >
           <TextInput
             style={[styles.singleTextInput, { color: theme?.text || "#000" }]}
@@ -703,14 +644,7 @@ const CommentInput = ({
             placeholder="Report the issue"
             placeholderTextColor={(theme?.text || "#000") + "80"}
           />
-          <View disabled={loading} id="open-sheet-button" style={styles.openSheetButton}>
-            <Image
-              resizeMode="cover"
-              source={require("./assets/chat-icon.png")}
-              style={styles.iconImage}
-            />
-          </View>
-        </TouchableOpacity>
+        </View>
 
         <View style={styles.spacer8} />
 
@@ -723,7 +657,15 @@ const CommentInput = ({
           {loading ? (
             <ActivityIndicator color="#FFF" style={styles.activityIndicator} />
           ) : (
-            <Text style={styles.addButtonStyle}>Add</Text>
+            <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+              <Path
+                d="M5 12H19M19 12L12 5M19 12L12 19"
+                stroke="#FFF"
+                strokeWidth={2.5}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </Svg>
           )}
         </TouchableOpacity>
       </View>
@@ -2192,75 +2134,77 @@ export const BugTracking = ({ projectID = "", token = "" }) => {
 
         <Modal animationType="slide" transparent={false} visible={visible}>
           <SafeAreaView style={styles.modalContainer}>
-            <View style={{ flex: 1 }}>
-              <View
-                style={[
-                  { flex: 1 },
-                  btmSheetVisible && {
-                    ...StyleSheet.absoluteFillObject,
-                    opacity: 0,
-                    zIndex: -1,
-                  },
-                ]}
-              >
-                <PreviewScreen
-                  loading={loading}
-                  src={src}
-                  showImageUpload={showImageUpload}
-                  videoUri={videoUri}
-                  onReset={onReset}
-                  setPaths={setPaths}
-                  setExpanded={setExpanded}
-                  withAnim={withAnim}
-                  currentPath={currentPath}
-                  paths={paths}
-                  expanded={expanded}
-                  exportRef={exportRef}
-                  setCurrentPath={setCurrentPath}
-                  setbtmSheetVisible={setbtmSheetVisible}
-                  openImagePicker={openImagePicker}
-                  player={player}
-                />
-                <KeyboardAvoidingView
-                  behavior={Platform.OS === "ios" ? "padding" : "height"}
-                  style={styles.footerContainer}>
-                  <CommentInput
-                    buttonColor={buttonColor}
-                    comment={comment}
-                    disabled={disabledButton}
-                    error={error}
+            <KeyboardAvoidingView
+              behavior="padding"
+              style={{ flex: 1 }}
+            >
+              <View style={{ flex: 1 }}>
+                <View
+                  style={[
+                    { flex: 1 },
+                    btmSheetVisible && {
+                      ...StyleSheet.absoluteFillObject,
+                      opacity: 0,
+                      zIndex: -1,
+                    },
+                  ]}
+                >
+                  <PreviewScreen
                     loading={loading}
-                    theme={theme}
-                    toggleBottomNavigationView={toggleBottomNavigationView}
-                    onSubmit={onSubmit}
-                    handleCommentChange={handleCommentChange}
+                    src={src}
+                    showImageUpload={showImageUpload}
+                    videoUri={videoUri}
+                    onReset={onReset}
+                    setPaths={setPaths}
+                    setExpanded={setExpanded}
+                    withAnim={withAnim}
+                    currentPath={currentPath}
+                    paths={paths}
+                    expanded={expanded}
+                    exportRef={exportRef}
+                    setCurrentPath={setCurrentPath}
+                    setbtmSheetVisible={setbtmSheetVisible}
+                    openImagePicker={openImagePicker}
+                    player={player}
                   />
-                </KeyboardAvoidingView>
+                  <View style={styles.footerContainer}>
+                    <CommentInput
+                      buttonColor={buttonColor}
+                      comment={comment}
+                      disabled={disabledButton}
+                      error={error}
+                      loading={loading}
+                      theme={theme}
+                      onSubmit={onSubmit}
+                      handleCommentChange={handleCommentChange}
+                    />
+                  </View>
+                </View>
+                {btmSheetVisible && (
+                  <InputScreen
+                    comment={comment}
+                    handleCommentChange={handleCommentChange}
+                    description={description}
+                    setDescription={setDescription}
+                    issueTitleRef={issueTitleRef}
+                    error={error}
+                    closeSheet={toggleBottomNavigationView}
+                    projectDetails={projectDetails}
+                    selectedAssignees={selectedAssignees}
+                    setSelectedAssignees={setSelectedAssignees}
+                    selectedDueDate={selectedDueDate}
+                    setSelectedDueDate={setSelectedDueDate}
+                    selectedPriority={selectedPriority}
+                    setSelectedPriority={setSelectedPriority}
+                    buttonColor={buttonColor}
+                    disabled={disabledButton}
+                    onSubmit={onSubmit}
+                    loading={loading}
+                    exportRef={exportRef}
+                  />
+                )}
               </View>
-              {btmSheetVisible && (
-                <InputScreen
-                  comment={comment}
-                  handleCommentChange={handleCommentChange}
-                  description={description}
-                  setDescription={setDescription}
-                  issueTitleRef={issueTitleRef}
-                  error={error}
-                  closeSheet={toggleBottomNavigationView}
-                  projectDetails={projectDetails}
-                  selectedAssignees={selectedAssignees}
-                  setSelectedAssignees={setSelectedAssignees}
-                  selectedDueDate={selectedDueDate}
-                  setSelectedDueDate={setSelectedDueDate}
-                  selectedPriority={selectedPriority}
-                  setSelectedPriority={setSelectedPriority}
-                  buttonColor={buttonColor}
-                  disabled={disabledButton}
-                  onSubmit={onSubmit}
-                  loading={loading}
-                  exportRef={exportRef}
-                />
-              )}
-            </View>
+            </KeyboardAvoidingView>
           </SafeAreaView>
         </Modal>
       </Fragment>

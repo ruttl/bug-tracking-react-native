@@ -1,6 +1,6 @@
 {
   "name": "@ruttl/bug-tracking",
-  "version": "2.0.0",
+  "version": "2.0.5",
   "description": "React Native plugin for bug tracking via Ruttl",
   "main": "lib/commonjs/index.js",
   "module": "lib/module/index.js",
@@ -70,7 +70,8 @@
     "react": "^18.2.0",
     "react-native": "^0.74.2",
     "react-native-builder-bob": "^0.20.4",
-    "rimraf": "^5.0.10"
+    "rimraf": "^5.0.10",
+    "typescript": "^5.9.3"
   },
   "expo": {
     "plugins": [
@@ -84,7 +85,7 @@
     "targets": [
       "commonjs",
       "module",
-      "typescript"
+      ["typescript", { "tsc": "./node_modules/.bin/tsc" }]
     ]
   },
   "eslintIgnore": [
