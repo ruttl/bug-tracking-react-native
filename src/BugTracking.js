@@ -2330,7 +2330,7 @@ const styles = StyleSheet.create({
   },
   rightIconContainer: {
     height: 52,
-    width: 80,
+    width: 60,
     borderRadius: 27,
     backgroundColor: "#6552ff",
     alignItems: "center",
