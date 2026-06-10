@@ -1439,7 +1439,10 @@ export const BugTracking = ({ projectID = "", token = "" }) => {
     setLoading(false);
     setShowImageUpload(false);
     setVideoUri(null);
-    if (player) player.pause();
+    if (player) {
+      player.pause();
+      player.replace(null);
+    }
     isCapturing.current = false;
     setSelectedAssignees([]);
     setSelectedDueDate(null);
