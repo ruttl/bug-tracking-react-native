@@ -688,7 +688,7 @@ const PreviewScreen = ({ loading, src, videoUri, showImageUpload, onReset, setPa
   useEffect(() => {
     if (!videoUri || !player) return;
     const timer = setTimeout(() => {
-      player.replace({ uri: videoUri });
+      player.replace(videoUri);
       player.loop = false;
       player.play();
     }, 500);

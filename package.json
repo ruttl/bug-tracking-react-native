@@ -49,7 +49,8 @@
     "react-native-safe-area-context": "^5.5.2",
     "react-native-screens": "^4.18.1",
     "react-native-svg": "^15.13.0",
-    "react-native-view-shot": "^4.0.4"
+    "react-native-view-shot": "^4.0.4",
+    "expo-audio": ">=0.3.0"
   },
   "dependencies": {
     "axios": "^1.6.8",
