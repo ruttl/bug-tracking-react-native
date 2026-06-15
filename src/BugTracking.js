@@ -1376,7 +1376,7 @@ const LiveDrawingOverlay = ({
   );
 };
 
-export const BugTracking = ({ projectID = "", token = "", getScreenName }) => {
+export const BugTracking = ({ projectID = "", token = "" }) => {
   if (Platform.OS === "ios") {
     throw new Error(`BugTracking is currently not supported on iOS`);
   }
@@ -1390,7 +1390,6 @@ export const BugTracking = ({ projectID = "", token = "", getScreenName }) => {
   const exportRef = useRef();
   const liveDrawingTimeoutRef = useRef(null);
   const isCapturing = useRef(false);
-  const capturedScreenName = useRef(null);
   const [comment, setComment] = useState("");
   const [description, setDescription] = useState("");
   const [currentPath, setCurrentPath] = useState([]);
@@ -1521,7 +1520,6 @@ export const BugTracking = ({ projectID = "", token = "", getScreenName }) => {
     try {
       if (isCapturing.current) return;
       isCapturing.current = true;
-      capturedScreenName.current = getScreenName ? getScreenName() : null;
       setWidgetVisible(false);
       setVisible(true);
       await new Promise((resolve) => setTimeout(resolve, 500));
@@ -1745,7 +1743,6 @@ export const BugTracking = ({ projectID = "", token = "", getScreenName }) => {
       highlightedCoords: highlightedCoords ?? {},
       image: image ? image : '',
       projectID,
-      screenName: capturedScreenName.current ?? null,
     };
 
     if (videoUrlFile) {
@@ -1958,7 +1955,6 @@ export const BugTracking = ({ projectID = "", token = "", getScreenName }) => {
       const hasPermissions = await checkPermissions();
       if (!hasPermissions) return;
 
-      capturedScreenName.current = getScreenName ? getScreenName() : null;
       const granted = await MyModuleJS.requestPermissions();
       if (granted) {
         playSound();
@@ -2957,7 +2953,6 @@ const styles = StyleSheet.create({
 BugTracking.propTypes = {
   projectID: PropTypes.string.isRequired,
   token: PropTypes.string.isRequired,
-  getScreenName: PropTypes.func,
 };
 
 export default BugTracking;
